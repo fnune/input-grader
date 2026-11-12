@@ -1,5 +1,5 @@
 -- Minimal test runner: `lua tests/run.lua` from the repo root, any Lua 5.1+ or LuaJIT.
-package.path = "lua/?.lua;tests/?.lua;" .. package.path
+package.path = "lua/?.lua;lua/?/init.lua;tests/?.lua;" .. package.path
 
 local files = {
   "test_checker", "test_inputs", "test_grader", "test_bench", "test_overlay", "test_launcher",

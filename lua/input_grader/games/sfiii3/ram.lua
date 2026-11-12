@@ -13,6 +13,7 @@ M.WAZA_WORK = { 0x020256C4, 0x02025CE4 }
 M.PLAYER = { 0x02068C6C, 0x02069104 }
 M.SELECTED_SA = { 0x020154D3, 0x020154D5 }
 M.WAZA_FLAG, M.WORK_SIZE = 0x16, 28
+M.MATCH_STATE, M.IN_MATCH = 0x020154A7, 2 -- 3rd_training_lua: 2 once a round accepts input
 
 local Ram = {}
 Ram.__index = Ram
@@ -21,6 +22,10 @@ Ram.__index = Ram
 --- @param player number 1 or 2
 function M.new(mem, player)
   return setmetatable({ mem = mem, player = player, records = {} }, Ram)
+end
+
+function Ram:in_match()
+  return self.mem.u8(M.MATCH_STATE) == M.IN_MATCH
 end
 
 function Ram:fighter_row()

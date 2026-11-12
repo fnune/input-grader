@@ -44,7 +44,8 @@ end
 --- Feed one check frame.
 --- @param state table { flag = {[slot]=n}, work = {[slot]={w_type, ptr, ...}} }
 --- @param dead table|nil slot -> true when a dead input abandoned the slot this frame
-function Tracker:update(state, dead)
+--- @param started number|nil slot of a move the game started this frame
+function Tracker:update(state, dead, started)
   self.frame = self.frame + 1
   local prev = self.prev
   for slot, record in pairs(self.records) do
@@ -58,7 +59,9 @@ function Tracker:update(state, dead)
 
     -- command_ok sets the flag to `reset` and command_ok_move decrements it in the same frame,
     -- so a completion shows as a rising flag.
-    local completed = flag > before_flag
+    -- A move that starts in the frame its motion completes is cleared (waza_compel_init) before
+    -- RAM can show the flag, so the start itself marks the completion.
+    local completed = flag > before_flag or (started == slot and before_flag <= 0)
     if completed then
       if not open or before_p == 0 then run = start_run(self, slot) end
       mark_steps(run, before_p + 1, #record.steps, self.frame)

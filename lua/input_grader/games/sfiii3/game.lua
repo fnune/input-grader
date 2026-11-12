@@ -142,7 +142,7 @@ function Game:update()
     end
   end
   self.flags = obs.state.flag
-  self.tracker:update(obs.state, dead)
+  self.tracker:update(obs.state, dead, obs.started and obs.started.slot)
 
   local graded = {}
   local function finish()

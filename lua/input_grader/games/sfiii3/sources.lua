@@ -47,7 +47,7 @@ function RamSource:poll()
   local r1, r2 = self.mem.s16(base + ROUTINE_NO + 2), self.mem.s16(base + ROUTINE_NO + 4)
   local was = self.routine
   self.routine = { r1, r2 }
-  if not self.ram:check_ran() then return nil end
+  if not self.ram:in_match() or not self.ram:check_ran() then return nil end
   local fighter = self:fighter()
   if not fighter then return nil end
   local raw, ctx = self.ram:read_input()

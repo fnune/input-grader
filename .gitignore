@@ -1,0 +1,12 @@
+roms/
+vendor/
+build/
+nvram/
+cfg/
+diff/
+snap/
+sta/
+inp/
+*.csv
+__pycache__/
+result

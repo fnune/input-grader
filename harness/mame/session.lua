@@ -8,7 +8,9 @@ local space = machine.devices[":maincpu"].spaces["program"]
 
 local fields = {}
 for _, port in pairs(machine.ioport.ports) do
-  for name, field in pairs(port.fields) do fields[name] = field end
+  for name, field in pairs(port.fields) do
+    fields[name] = field
+  end
 end
 
 M.ADDR = {
@@ -21,17 +23,34 @@ M.ADDR = {
   select_sa = { 0x020154D3, 0x020154D5 },
 }
 
-function M.u8(a) return space:read_u8(a) end
-function M.u16(a) return space:read_u16(a) end
-function M.s16(a) return space:read_i16(a) end
-function M.u32(a) return space:read_u32(a) end
-function M.w8(a, v) space:write_u8(a, v) end
+function M.u8(a)
+  return space:read_u8(a)
+end
+function M.u16(a)
+  return space:read_u16(a)
+end
+function M.s16(a)
+  return space:read_i16(a)
+end
+function M.u32(a)
+  return space:read_u32(a)
+end
+function M.w8(a, v)
+  space:write_u8(a, v)
+end
 
 -- Names of the P1 controls as MAME's CPS3 driver labels them.
 M.P1 = {
-  up = "P1 Up", down = "P1 Down", left = "P1 Left", right = "P1 Right",
-  LP = "P1 Jab Punch", MP = "P1 Strong Punch", HP = "P1 Fierce Punch",
-  LK = "P1 Short Kick", MK = "P1 Forward Kick", HK = "P1 Roundhouse Kick",
+  up = "P1 Up",
+  down = "P1 Down",
+  left = "P1 Left",
+  right = "P1 Right",
+  LP = "P1 Jab Punch",
+  MP = "P1 Strong Punch",
+  HP = "P1 Fierce Punch",
+  LK = "P1 Short Kick",
+  MK = "P1 Forward Kick",
+  HK = "P1 Roundhouse Kick",
 }
 M.P2 = { LP = "P2 Jab Punch" }
 
@@ -39,17 +58,30 @@ local held = {}
 
 function M.hold(names)
   held = {}
-  for _, n in ipairs(names or {}) do held[n] = true end
+  for _, n in ipairs(names or {}) do
+    held[n] = true
+  end
 end
 
 -- Raw input word (up 1, down 2, left 4, right 8, LP 0x10 ... HK 0x400) to P1 control names.
 function M.hold_raw(raw)
-  local names, bitmap = {}, {
-    { 1, "up" }, { 2, "down" }, { 4, "left" }, { 8, "right" },
-    { 0x10, "LP" }, { 0x20, "MP" }, { 0x40, "HP" }, { 0x100, "LK" }, { 0x200, "MK" }, { 0x400, "HK" },
-  }
+  local names, bitmap =
+    {}, {
+      { 1, "up" },
+      { 2, "down" },
+      { 4, "left" },
+      { 8, "right" },
+      { 0x10, "LP" },
+      { 0x20, "MP" },
+      { 0x40, "HP" },
+      { 0x100, "LK" },
+      { 0x200, "MK" },
+      { 0x400, "HK" },
+    }
   for _, pair in ipairs(bitmap) do
-    if math.floor(raw / pair[1]) % 2 == 1 then table.insert(names, M.P1[pair[2]]) end
+    if math.floor(raw / pair[1]) % 2 == 1 then
+      table.insert(names, M.P1[pair[2]])
+    end
   end
   M.hold(names)
 end
@@ -67,12 +99,16 @@ function M.spawn(fn)
 end
 
 function M.wait(frames)
-  for _ = 1, frames do coroutine.yield() end
+  for _ = 1, frames do
+    coroutine.yield()
+  end
 end
 
 function M.wait_until(pred, limit)
   for _ = 1, limit or 36000 do
-    if pred() then return true end
+    if pred() then
+      return true
+    end
     coroutine.yield()
   end
   error("timed out waiting")
@@ -93,7 +129,9 @@ subscription = emu.add_machine_frame_notifier(function()
       print("harness error: " .. tostring(err))
       machine:exit()
     end
-    if coroutine.status(tasks[i]) == "dead" then table.remove(tasks, i) end
+    if coroutine.status(tasks[i]) == "dead" then
+      table.remove(tasks, i)
+    end
   end
   apply_inputs()
 end)
@@ -103,13 +141,15 @@ function M.exit()
   machine:exit()
 end
 
---- Coin up two players, pick Ryu (P1) with the given super art index and Ryu (P2),
---- and return once the round accepts input.
-function M.boot_to_match(super_art)
+--- Coin up two players, pick a character for P1 (command table row, Ryu by default) with the
+--- given super art index and Ryu for P2, and return once the round accepts input.
+function M.boot_to_match(super_art, p1_row)
   local A = M.ADDR
   M.wait(300)
   M.wait_until(function()
-    if M.u8(A.select_state[1]) == 2 and M.u8(A.select_state[2]) == 2 then return true end
+    if M.u8(A.select_state[1]) == 2 and M.u8(A.select_state[2]) == 2 then
+      return true
+    end
     M.press({ "Coin 1" })
     M.press({ "Coin 2" })
     M.press({ "1 Player Start" })
@@ -121,13 +161,19 @@ function M.boot_to_match(super_art)
     local lp = player == 1 and M.P1.LP or M.P2.LP
     M.press({ lp })
     M.wait(20)
-    M.w8(A.select_id[player], 2)
-    M.wait_until(function() return M.u8(A.select_state[player]) == 4 end, 600)
+    M.w8(A.select_id[player], player == 1 and (p1_row or 2) or 2)
+    M.wait_until(function()
+      return M.u8(A.select_state[player]) == 4
+    end, 600)
     M.wait(30)
-    if player == 1 then M.w8(A.select_sa[1], super_art or 0) end
+    if player == 1 then
+      M.w8(A.select_sa[1], super_art or 0)
+    end
     M.press({ lp })
   end
-  M.wait_until(function() return M.u8(A.match_state) == 2 end, 6000)
+  M.wait_until(function()
+    return M.u8(A.match_state) == 2
+  end, 6000)
   M.wait(240)
 end
 

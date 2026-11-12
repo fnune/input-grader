@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1794192123,
+        "narHash": "sha256-SvB8u5qaJAOwZZyZciqTVOg/rBoUs2w0sFTU6ED51AQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "177d0540942fb205af6993b1d5fa0b57799e09f8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "sf3-decomp": "sf3-decomp"
+      }
+    },
+    "sf3-decomp": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793615944,
+        "narHash": "sha256-Ox0cnjwuXHtxeu8Paf2w9CQD+cQMemLPNXFYOg0tVqQ=",
+        "owner": "gibletto",
+        "repo": "sfIII3-cps3-decomp",
+        "rev": "d440837003292a6521f85f0c57752c7b5f30255b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "gibletto",
+        "repo": "sfIII3-cps3-decomp",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

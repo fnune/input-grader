@@ -5,15 +5,21 @@
 local M = {}
 
 local MULTI = {
-  { "emu", "registerbefore" }, { "emu", "registerafter" }, { "emu", "registerstart" },
-  { "emu", "registerexit" }, { "gui", "register" },
-  { "savestate", "registerload" }, { "savestate", "registersave" },
+  { "emu", "registerbefore" },
+  { "emu", "registerafter" },
+  { "emu", "registerstart" },
+  { "emu", "registerexit" },
+  { "gui", "register" },
+  { "savestate", "registerload" },
+  { "savestate", "registersave" },
 }
 
 --- @param env table the global environment holding emu, gui, savestate, input (_G by default)
 function M.install(env)
   env = env or _G
-  if env.__input_grader_hooks then return env.__input_grader_hooks end
+  if env.__input_grader_hooks then
+    return env.__input_grader_hooks
+  end
   local installed = { lists = {}, hotkeys = {} }
   for _, pair in ipairs(MULTI) do
     local lib, name = env[pair[1]], pair[2]
@@ -22,10 +28,14 @@ function M.install(env)
       local list = {}
       installed.lists[pair[1] .. "." .. name] = list
       original(function(...)
-        for _, fn in ipairs(list) do fn(...) end
+        for _, fn in ipairs(list) do
+          fn(...)
+        end
       end)
       lib[name] = function(fn)
-        if fn then table.insert(list, fn) end
+        if fn then
+          table.insert(list, fn)
+        end
       end
     end
   end

@@ -19,7 +19,9 @@ M.SUPPORTED = { sfiii3nr1 = true, sfiii3n = true }
 function M.build(platform, options)
   options = options or {}
   if not M.SUPPORTED[platform.romname] then
-    platform.print("input_grader: ROM '" .. tostring(platform.romname) .. "' is untested; grading may be wrong. Use sfiii3nr1.")
+    platform.print(
+      "input_grader: ROM '" .. tostring(platform.romname) .. "' is untested; grading may be wrong. Use sfiii3nr1."
+    )
   end
   local commands = require("input_grader.games.sfiii3.commands")
   local source = sources.ram(platform.mem, commands, options.player or 1)

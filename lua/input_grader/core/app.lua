@@ -14,7 +14,9 @@ App.HELP = "Alt+7 bench start/stop  Alt+8 target move  Alt+9 hide"
 function App.new(deps)
   local self = setmetatable({}, App)
   self.game, self.bench, self.clock, self.log = deps.game, deps.bench, deps.clock, deps.log
-  self.timestamp = deps.timestamp or function() return "" end
+  self.timestamp = deps.timestamp or function()
+    return ""
+  end
   self.overlay = deps.overlay or Overlay.new()
   self.visible, self.show_bench = true, false
   self.started_at = self.clock()
@@ -26,7 +28,9 @@ function App:frame()
   for _, attempt in ipairs(self.game:update()) do
     self.last, self.last_at = attempt, self.clock()
     self.bench:record(attempt)
-    if self.log then self.log(csv.row(self.timestamp(), attempt)) end
+    if self.log then
+      self.log(csv.row(self.timestamp(), attempt))
+    end
   end
 end
 
@@ -52,7 +56,9 @@ function App:toggle_visible()
 end
 
 function App:draw(canvas)
-  if not self.visible then return end
+  if not self.visible then
+    return
+  end
   local now = self.clock()
   self.overlay:draw(canvas, {
     attempt = self.last,

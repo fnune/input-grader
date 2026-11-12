@@ -12,7 +12,9 @@ function M.fighter(row)
 end
 
 local function show(v)
-  if type(v) == "string" then return string.format("%q", v) end
+  if type(v) == "string" then
+    return string.format("%q", v)
+  end
   return tostring(v)
 end
 
@@ -23,7 +25,9 @@ function M.eq(actual, expected, label)
 end
 
 function M.truthy(v, label)
-  if not v then error((label or "expected a truthy value") .. ", got " .. show(v), 2) end
+  if not v then
+    error((label or "expected a truthy value") .. ", got " .. show(v), 2)
+  end
 end
 
 function M.contains(haystack, needle)

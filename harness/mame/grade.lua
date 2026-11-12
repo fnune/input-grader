@@ -21,7 +21,9 @@ local original_frame = app.frame
 function app:frame()
   local before = self.last
   original_frame(self)
-  if self.last ~= before then table.insert(graded, self.last) end
+  if self.last ~= before then
+    table.insert(graded, self.last)
+  end
 end
 run.attach(platform, app)
 
@@ -29,13 +31,43 @@ run.attach(platform, app)
 local CASES = {
   { "clean Hadoken", { { 5, 20 }, { 2, 2 }, { 3, 2 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", true },
   { "skipped diagonal", { { 5, 20 }, { 2, 3 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", false, "skipped_step" },
-  { "slow diagonal", { { 5, 20 }, { 2, 1 }, { 1, 12 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", false, "too_slow" },
-  { "late button", { { 5, 20 }, { 2, 1 }, { 3, 1 }, { 6, 14 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", false, "late_button" },
-  { "early held button", { { 5, 20 }, { 2, 1 }, { 3, 1, "LP" }, { 6, 16, "LP" }, { 5, 70 } }, "Hadoken", false, "early_button" },
+  {
+    "slow diagonal",
+    { { 5, 20 }, { 2, 1 }, { 1, 12 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 70 } },
+    "Hadoken",
+    false,
+    "too_slow",
+  },
+  {
+    "late button",
+    { { 5, 20 }, { 2, 1 }, { 3, 1 }, { 6, 14 }, { 6, 1, "LP" }, { 5, 70 } },
+    "Hadoken",
+    false,
+    "late_button",
+  },
+  {
+    "early held button",
+    { { 5, 20 }, { 2, 1 }, { 3, 1, "LP" }, { 6, 16, "LP" }, { 5, 70 } },
+    "Hadoken",
+    false,
+    "early_button",
+  },
   -- Pressing LP on 2 starts a crouching jab, so the release that completes the motion comes
   -- while Ryu is busy and no Hadoken starts: early button is the right verdict here.
-  { "press on 2, release on 6", { { 5, 20 }, { 2, 1, "LP" }, { 3, 1, "LP" }, { 6, 1 }, { 5, 70 } }, "Hadoken", false, "early_button" },
-  { "up cancels", { { 5, 20 }, { 2, 2 }, { 3, 1 }, { 8, 1 }, { 6, 1, "LP" }, { 5, 90 } }, "Hadoken", false, "cancelled" },
+  {
+    "press on 2, release on 6",
+    { { 5, 20 }, { 2, 1, "LP" }, { 3, 1, "LP" }, { 6, 1 }, { 5, 70 } },
+    "Hadoken",
+    false,
+    "early_button",
+  },
+  {
+    "up cancels",
+    { { 5, 20 }, { 2, 2 }, { 3, 1 }, { 8, 1 }, { 6, 1, "LP" }, { 5, 90 } },
+    "Hadoken",
+    false,
+    "cancelled",
+  },
   { "Shoryuken", { { 5, 20 }, { 6, 2 }, { 2, 1 }, { 3, 1, "HP" }, { 5, 90 } }, "Shoryuken", true },
   { "Tatsumaki", { { 5, 20 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LK" }, { 5, 110 } }, "Tatsumaki Senpukyaku", true },
 }
@@ -58,9 +90,19 @@ S.spawn(function()
     else
       local code = a.error and a.error.code or nil
       local good = a.move == case[3] and a.ok == case[4] and code == case[5]
-      if not good then failures = failures + 1 end
-      line = string.format("%s %s: %s ok=%s %s | %s | %s", good and "PASS" or "FAIL", case[1], a.move, tostring(a.ok),
-        code or "", require("input_grader.core.overlay").steps_line(a), a.error and a.error.text or "")
+      if not good then
+        failures = failures + 1
+      end
+      line = string.format(
+        "%s %s: %s ok=%s %s | %s | %s",
+        good and "PASS" or "FAIL",
+        case[1],
+        a.move,
+        tostring(a.ok),
+        code or "",
+        require("input_grader.core.overlay").steps_line(a),
+        a.error and a.error.text or ""
+      )
     end
     table.insert(report, line)
     print(line)
@@ -76,7 +118,9 @@ S.spawn(function()
   app:toggle_bench()
   app.last = nil
   S.wait(4)
-  if snapshots then manager.machine.video:snapshot() end
+  if snapshots then
+    manager.machine.video:snapshot()
+  end
   local summary = app.bench:summary()
   for _, m in ipairs(summary.moves) do
     table.insert(report, string.format("bench %s: %d/%d", m.name, m.ok, m.n))

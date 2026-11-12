@@ -16,9 +16,21 @@ Checker.__index = Checker
 
 local function new_work()
   return {
-    w_type = 0, w_int = 0, free1 = 0, free2 = 0, free3 = 0, w_lvr = 0,
-    ptr = 1, idx = 0, flag = 0, shot_flag = 0, shot_flag2 = 0, shot_ok = 0,
-    w_dead = 0, w_dead2 = 0, why = nil,
+    w_type = 0,
+    w_int = 0,
+    free1 = 0,
+    free2 = 0,
+    free3 = 0,
+    w_lvr = 0,
+    ptr = 1,
+    idx = 0,
+    flag = 0,
+    shot_flag = 0,
+    shot_flag2 = 0,
+    shot_ok = 0,
+    w_dead = 0,
+    w_dead2 = 0,
+    why = nil,
   }
 end
 
@@ -39,11 +51,24 @@ function Checker.new(fighter)
   self.fighter = fighter
   self.frame_no = 0
   self.lvr = {
-    sw_new = 0, sw_old = 0, sw_chg = 0, sw_now = 0, old_now = 0,
-    now_lvbt = 0, old_lvbt = 0, new_lvbt = 0, sw_lever = 0,
-    shot_up = 0, shot_down = 0, shot_ud = 0, waza_no = 0, cnt = {},
+    sw_new = 0,
+    sw_old = 0,
+    sw_chg = 0,
+    sw_now = 0,
+    old_now = 0,
+    now_lvbt = 0,
+    old_lvbt = 0,
+    new_lvbt = 0,
+    sw_lever = 0,
+    shot_up = 0,
+    shot_down = 0,
+    shot_ud = 0,
+    waza_no = 0,
+    cnt = {},
   }
-  for i = 1, 14 do self.lvr.cnt[i] = 0 end
+  for i = 1, 14 do
+    self.lvr.cnt[i] = 0
+  end
   self.cp = { sw_lvbt = 0, sw_new = 0, sw_old = 0, sw_now = 0, sw_off = 0, sw_chg = 0, old_now = 0 }
   self.flag, self.work, self.records = {}, {}, {}
   local active = active_slots(fighter.slot_counts)
@@ -65,7 +90,9 @@ end
 -- Per-call context, as the game keeps it in globals (cmd_id, waza_type, waza_ptr).
 local cur_self, cur_slot, cur_work, cur_record
 
-local function lvr() return cur_self.lvr end
+local function lvr()
+  return cur_self.lvr
+end
 
 local function emit(kind, extra)
   local e = extra or {}
@@ -135,13 +162,19 @@ local function dead_lvr_check()
 end
 
 local function finish_or_next()
-  if is_end() then command_ok() else check_next() end
+  if is_end() then
+    command_ok()
+  else
+    check_next()
+  end
 end
 
 local function tick_timeout()
   local w = cur_work
   w.w_int = w.w_int - 1
-  if w.w_int < 0 then abandon("timeout") end
+  if w.w_int < 0 then
+    abandon("timeout")
+  end
 end
 
 local function lever_changed()
@@ -177,19 +210,29 @@ end
 
 checks[CK.CHARGE] = function()
   local w, l = cur_work, lvr()
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local sw_work = band(w.w_lvr, C.LV_MASK)
   local exact = has(w.w_lvr, C.LV_EXACT)
   local holding = exact and (sw_work == l.sw_lever) or (not exact and has(sw_work, l.sw_lever))
   if holding then
     if exact then
       w.free2 = w.free2 - 1
-      if w.flag ~= 0 then return end
-      if w.free2 < 0 then w.flag = 1 end
+      if w.flag ~= 0 then
+        return
+      end
+      if w.free2 < 0 then
+        w.flag = 1
+      end
     else
-      if w.flag ~= 0 then return end
+      if w.flag ~= 0 then
+        return
+      end
       w.free1 = w.free1 - 1
-      if w.free1 < 0 then w.flag = 1 end
+      if w.free1 < 0 then
+        w.flag = 1
+      end
     end
   else
     if w.flag ~= 0 then
@@ -206,9 +249,13 @@ checks[CK.HOLD] = function()
   local w, l = cur_work, lvr()
   local sw_work = band(l.sw_new, w.w_lvr)
   if w.w_lvr == sw_work then
-    if w.flag ~= 0 then return end
+    if w.flag ~= 0 then
+      return
+    end
     w.free2 = w.free2 - 1
-    if w.free2 < 0 then w.flag = 1 end
+    if w.free2 < 0 then
+      w.flag = 1
+    end
   else
     if w.flag ~= 0 and sw_work == 0 then
       w.flag = 0
@@ -238,10 +285,14 @@ end
 
 checks[CK.SHOT_HOLD] = function()
   local w = cur_work
-  count_releases(C.CNT_S1, 6, C.SW_LP, function(c) return c >= w.w_int end)
+  count_releases(C.CNT_S1, 6, C.SW_LP, function(c)
+    return c >= w.w_int
+  end)
   if w.shot_ok ~= 0 then
     w.free2 = w.free2 - 1
-    if w.free2 < 0 then w.shot_ok, w.free2 = 0, w.free1 end
+    if w.free2 < 0 then
+      w.shot_ok, w.free2 = 0, w.free1
+    end
   end
   if w.shot_ok >= w.w_lvr then
     w.shot_ok, w.free2 = 0, w.free1
@@ -252,10 +303,18 @@ end
 checks[CK.RENDA] = function()
   local w, l, flags = cur_work, lvr(), cur_self.flag
   local light, medium, heavy = C.SW_LK, C.SW_MK, C.SW_HK
-  if w.w_lvr == C.SW_LP then light, medium, heavy = C.SW_LP, C.SW_MP, C.SW_HP end
-  if has(l.sw_now, light) then w.flag = w.flag + 1 end
-  if has(l.sw_now, medium) then w.shot_flag = w.shot_flag + 1 end
-  if has(l.sw_now, heavy) then w.shot_flag2 = w.shot_flag2 + 1 end
+  if w.w_lvr == C.SW_LP then
+    light, medium, heavy = C.SW_LP, C.SW_MP, C.SW_HP
+  end
+  if has(l.sw_now, light) then
+    w.flag = w.flag + 1
+  end
+  if has(l.sw_now, medium) then
+    w.shot_flag = w.shot_flag + 1
+  end
+  if has(l.sw_now, heavy) then
+    w.shot_flag2 = w.shot_flag2 + 1
+  end
   w.w_int = w.w_int - 1
   if w.w_int < 0 then
     w.flag, w.shot_flag, w.shot_flag2, w.w_int = 0, 0, 0, w.free1
@@ -276,8 +335,12 @@ checks[CK.RENDA] = function()
     end
     return false
   end
-  if strength("shot_flag2", 9) then return end
-  if strength("shot_flag", 12) then return end
+  if strength("shot_flag2", 9) then
+    return
+  end
+  if strength("shot_flag", 12) then
+    return
+  end
   strength("flag", 15)
 end
 
@@ -298,7 +361,9 @@ checks[CK.TURN] = function()
     w.flag, w.shot_flag, w.shot_flag2, w.free1, w.shot_ok = 0, 0, 0, 14, 0
   else
     w.free1 = w.free1 - 1
-    if w.free1 <= 0 then w.free1, w.shot_ok = 14, 0 end
+    if w.free1 <= 0 then
+      w.free1, w.shot_ok = 14, 0
+    end
   end
   local lv = 1
   for _ = 1, 4 do
@@ -308,7 +373,9 @@ checks[CK.TURN] = function()
     end
     lv = lshift(lv, 1)
   end
-  if w.shot_ok ~= C.LV_MASK then return end
+  if w.shot_ok ~= C.LV_MASK then
+    return
+  end
   if is_end() then
     command_ok()
   else
@@ -322,11 +389,17 @@ local function check_7()
   w.w_int = w.w_int - 1
   -- The kick variant starts at the s4 counter, which counts CMD_SW_PP: a quirk of the game.
   local first_counter, first_flag = C.CNT_S1, C.SW_LP
-  if w.w_type ~= CK.SHOT_P then first_counter, first_flag = C.CNT_S1 + 3, C.SW_LK end
-  count_releases(first_counter, 3, first_flag, function(c) return has(c, w.w_lvr) end)
+  if w.w_type ~= CK.SHOT_P then
+    first_counter, first_flag = C.CNT_S1 + 3, C.SW_LK
+  end
+  count_releases(first_counter, 3, first_flag, function(c)
+    return has(c, w.w_lvr)
+  end)
   if w.shot_ok ~= 0 then
     w.free2 = w.free2 - 1
-    if w.free2 < 0 then w.shot_ok, w.free2, w.shot_flag = 0, w.free1, 0 end
+    if w.free2 < 0 then
+      w.shot_ok, w.free2, w.shot_flag = 0, w.free1, 0
+    end
   end
   if w.shot_ok >= w.w_lvr then
     w.shot_ok, w.free2 = 0, w.free1
@@ -341,7 +414,11 @@ checks[CK.LEVER_CHANGE] = function()
   tick_timeout()
   if has(w.w_lvr, C.LV_EXACT) then
     if lever_changed() then
-      if l.sw_lever == band(w.w_lvr, C.LV_MASK) then finish_or_next() else abandon("wrong") end
+      if l.sw_lever == band(w.w_lvr, C.LV_MASK) then
+        finish_or_next()
+      else
+        abandon("wrong")
+      end
     end
   elseif w.w_lvr == 0 then
     if l.new_lvbt == 0 then
@@ -350,7 +427,11 @@ checks[CK.LEVER_CHANGE] = function()
       abandon("wrong")
     end
   elseif lever_changed() then
-    if has(l.sw_lever, w.w_lvr) then finish_or_next() else abandon("wrong") end
+    if has(l.sw_lever, w.w_lvr) then
+      finish_or_next()
+    else
+      abandon("wrong")
+    end
   end
 end
 
@@ -359,10 +440,16 @@ local PARRY_SLOTS = { 3, 4, 5, 6, 12 }
 local function parry_exclude_others()
   local flags, slot = cur_self.flag, cur_slot
   for _, other in ipairs(PARRY_SLOTS) do
-    if other ~= slot and flags[slot] > flags[other] then flags[other] = 0 end
+    if other ~= slot and flags[slot] > flags[other] then
+      flags[other] = 0
+    end
   end
-  if slot == 5 and cur_self.work[6].free3 > 0 then flags[5] = 0 end
-  if slot == 6 and cur_self.work[5].free3 > 0 then flags[6] = 0 end
+  if slot == 5 and cur_self.work[6].free3 > 0 then
+    flags[5] = 0
+  end
+  if slot == 6 and cur_self.work[5].free3 > 0 then
+    flags[6] = 0
+  end
 end
 
 local function parry_tail(w, l, strict)
@@ -378,7 +465,11 @@ local function parry_tail(w, l, strict)
         w.shot_ok = w.shot_ok + 1
       elseif l.sw_lever ~= w.w_lvr then
         flags[cur_slot] = 0
-        if strict then abandon("wrong") else w.shot_ok = w.shot_ok + 1 end
+        if strict then
+          abandon("wrong")
+        else
+          w.shot_ok = w.shot_ok + 1
+        end
       end
     else
       flags[cur_slot] = 0
@@ -392,11 +483,17 @@ local function parry_tail(w, l, strict)
       flags[cur_slot] = 0
     elseif has(l.sw_now, C.LV_MASK) then
       flags[cur_slot] = 0
-      if strict then abandon("wrong") else w.shot_ok = w.shot_ok + 1 end
+      if strict then
+        abandon("wrong")
+      else
+        w.shot_ok = w.shot_ok + 1
+      end
     end
   elseif w.shot_ok == 4 and not strict then
     w.free3 = w.free3 - 1
-    if w.free3 < 0 then abandon("timeout") end
+    if w.free3 < 0 then
+      abandon("timeout")
+    end
   end
 end
 
@@ -404,7 +501,9 @@ local function parry(in_air_only)
   return function(ctx)
     local w, l = cur_work, lvr()
     if w.shot_ok == 0 then
-      if l.sw_lever == 0 then w.shot_ok = 1 end
+      if l.sw_lever == 0 then
+        w.shot_ok = 1
+      end
     elseif w.shot_ok == 1 then
       local slot = cur_slot
       local tap = has(l.now_lvbt, C.LV_MASK)
@@ -454,7 +553,9 @@ checks[CK.UKEMI] = function()
   local w, l, flags = cur_work, lvr(), cur_self.flag
   if w.free3 > 0 then
     w.free3 = w.free3 - 1
-    if w.free3 <= 0 then abandon("timeout") end
+    if w.free3 <= 0 then
+      abandon("timeout")
+    end
   end
   local function trigger()
     flags[cur_slot] = 16 - C.UKEMI_TIME[flags[cur_slot] + 1]
@@ -462,15 +563,21 @@ checks[CK.UKEMI] = function()
     l.waza_no = cur_slot
     emit("complete")
   end
-  if lever_changed() and l.sw_lever == C.LV_DOWN then trigger() end
-  if band(bor(l.sw_now, l.old_now), C.SW_PUNCH) == C.SW_PUNCH then trigger() end
+  if lever_changed() and l.sw_lever == C.LV_DOWN then
+    trigger()
+  end
+  if band(bor(l.sw_now, l.old_now), C.SW_PUNCH) == C.SW_PUNCH then
+    trigger()
+  end
 end
 
 checks[CK.RENDA3] = function()
   local w, l, flags = cur_work, lvr(), cur_self.flag
   w.w_int = w.w_int - 1
   local group = (w.w_lvr == C.SW_LP) and C.SW_PUNCH or C.SW_KICK
-  if has(l.sw_now, group) then w.flag = w.flag + 1 end
+  if has(l.sw_now, group) then
+    w.flag = w.flag + 1
+  end
   local refresh = (cur_slot % 2 == 1) and 10 or 6
   if flags[cur_slot] ~= 0 then
     if w.w_int <= 0 then
@@ -498,7 +605,9 @@ checks[CK.LEVER_COUNT] = function()
     abandon("timeout")
     return
   end
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local hit
   if has(w.w_lvr, C.LV_EXACT) then
     hit = l.sw_lever == band(w.w_lvr, C.LV_MASK)
@@ -509,7 +618,9 @@ checks[CK.LEVER_COUNT] = function()
   end
   if hit then
     w.shot_ok = w.shot_ok + 1
-    if w.shot_ok >= w.free1 then finish_or_next() end
+    if w.shot_ok >= w.free1 then
+      finish_or_next()
+    end
   end
 end
 
@@ -522,11 +633,15 @@ local function check_16()
     return
   end
   local sw_work, flag = band(l.sw_now, C.SW_KICK), C.SW_LK
-  if w.w_type == CK.PRESS_P then sw_work, flag = band(l.sw_now, C.SW_PUNCH), C.SW_LP end
+  if w.w_type == CK.PRESS_P then
+    sw_work, flag = band(l.sw_now, C.SW_PUNCH), C.SW_LP
+  end
   w.shot_flag2 = w.shot_flag
   w.shot_flag = 0
   for _ = 1, 3 do
-    if has(sw_work, flag) then w.shot_ok = w.shot_ok + 1 end
+    if has(sw_work, flag) then
+      w.shot_ok = w.shot_ok + 1
+    end
     flag = lshift(flag, 1)
   end
   if w.shot_ok >= w.w_lvr then
@@ -544,7 +659,9 @@ checks[CK.LEVER_REPEAT] = function()
     abandon("timeout")
     return
   end
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local sw_lever = band(l.sw_lever, C.LV_MASK)
   local hit
   if has(w.w_lvr, C.LV_EXACT) then
@@ -564,7 +681,9 @@ end
 checks[CK.LEVER_SET] = function()
   local w, l = cur_work, lvr()
   tick_timeout()
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local sw_lever = band(l.sw_lever, C.LV_MASK)
   local hit
   if has(w.w_lvr, C.LV_EXACT) then
@@ -586,7 +705,9 @@ checks[CK.NONE] = function() end
 checks[CK.LEVER_PRESS] = function()
   local w, l = cur_work, lvr()
   tick_timeout()
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local sw_lever = band(l.sw_lever, C.LV_MASK)
   local hit
   if has(w.w_lvr, C.LV_EXACT) then
@@ -601,7 +722,9 @@ checks[CK.LEVER_PRESS] = function()
   else
     hit = has(l.now_lvbt, C.LV_MASK) and has(sw_lever, w.w_lvr)
   end
-  if hit then finish_or_next() end
+  if hit then
+    finish_or_next()
+  end
 end
 
 checks[CK.ROTATE] = function()
@@ -629,7 +752,9 @@ end
 checks[CK.PARRY_STRICT] = function()
   local w, l = cur_work, lvr()
   if w.shot_ok == 0 then
-    if l.sw_lever == 0 then w.shot_ok = 1 end
+    if l.sw_lever == 0 then
+      w.shot_ok = 1
+    end
   elseif w.shot_ok == 1 then
     if lever_changed() and l.sw_lever == w.w_lvr then
       w.shot_ok = 2
@@ -659,7 +784,9 @@ end
 
 checks[CK.LEVER_OFF] = function()
   local w, l = cur_work, lvr()
-  if dead_lvr_check() then return end
+  if dead_lvr_check() then
+    return
+  end
   local want = band(w.w_lvr, C.LV_MASK)
   if band(l.sw_now, C.LV_MASK) ~= want then
     if band(l.sw_lever, C.LV_MASK) ~= want and w.flag ~= 0 then
@@ -732,11 +859,19 @@ local function sw_pick_up(self, raw, facing_right)
   local l, cp = self.lvr, self.cp
   local bit_ = 1
   for i = 1, 10 do
-    if has(l.sw_new, bit_) then l.cnt[i] = l.cnt[i] + 1 else l.cnt[i] = 0 end
+    if has(l.sw_new, bit_) then
+      l.cnt[i] = l.cnt[i] + 1
+    else
+      l.cnt[i] = 0
+    end
     bit_ = lshift(bit_, 1)
   end
   for i = 1, 4 do
-    if has(l.sw_new, C.LVR_CHK[i]) then l.cnt[10 + i] = l.cnt[10 + i] + 1 else l.cnt[10 + i] = 0 end
+    if has(l.sw_new, C.LVR_CHK[i]) then
+      l.cnt[10 + i] = l.cnt[10 + i] + 1
+    else
+      l.cnt[10 + i] = 0
+    end
   end
   cp.sw_new, cp.sw_old, cp.sw_chg, cp.sw_now, cp.sw_off = l.sw_new, l.sw_old, l.sw_chg, l.sw_now, l.shot_down
 end
@@ -780,9 +915,13 @@ end
 
 local function strength_fires(self, slot)
   local record = self.records[slot]
-  if not record or self.flag[slot] == -1 or self.flag[slot] == 0 then return nil end
+  if not record or self.flag[slot] == -1 or self.flag[slot] == 0 then
+    return nil
+  end
   local index = band(record.btix, C.BT_INDEX)
-  if index == C.BT_NONE then return nil end
+  if index == C.BT_NONE then
+    return nil
+  end
   local cusw = conpane(self.cp, index)
   for j = 3, 0, -1 do
     local ex = record.exdt[j + 1]
@@ -804,13 +943,19 @@ function Checker:start(opts)
   local super_slot = opts.airborne and sa.air or sa.ground
   if super_slot and super_slot ~= 0 then
     local j = strength_fires(self, super_slot)
-    if j then return { slot = super_slot, strength = j, super = true } end
+    if j then
+      return { slot = super_slot, strength = j, super = true }
+    end
   end
   local first, last = C.SP_GROUND, C.SA_AIR - 1
-  if opts.airborne then first, last = C.SP_AIR, C.SLOTS - 1 end
+  if opts.airborne then
+    first, last = C.SP_AIR, C.SLOTS - 1
+  end
   for slot = first, last do
     local j = strength_fires(self, slot)
-    if j then return { slot = slot, strength = j } end
+    if j then
+      return { slot = slot, strength = j }
+    end
   end
   return nil
 end
@@ -820,7 +965,9 @@ end
 function Checker:consume(started)
   if started.super then
     for slot = 0, C.SLOTS - 1 do
-      if self.flag[slot] ~= -1 then self.work[slot].w_type = 0 end
+      if self.flag[slot] ~= -1 then
+        self.work[slot].w_type = 0
+      end
     end
     return
   end

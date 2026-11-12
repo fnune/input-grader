@@ -15,9 +15,13 @@ end
 
 --- The record of `frame`, or nil when it has scrolled out.
 function History:at(frame)
-  if frame > self.last or frame <= self.last - self.size then return nil end
+  if frame > self.last or frame <= self.last - self.size then
+    return nil
+  end
   local item = self.items[frame % self.size]
-  if item and item.frame == frame then return item end
+  if item and item.frame == frame then
+    return item
+  end
   return nil
 end
 
@@ -26,7 +30,9 @@ function History:range(first, last)
   local out = {}
   for f = math.max(first, self.last - self.size + 1), math.min(last, self.last) do
     local item = self:at(f)
-    if item then table.insert(out, item) end
+    if item then
+      table.insert(out, item)
+    end
   end
   return out
 end

@@ -10,15 +10,24 @@ local DEFAULTS = { x = 8, y = 150, width = 368, char_w = 4, line_h = 9, card_sec
 
 function Overlay.new(config)
   local self = setmetatable({ config = {} }, Overlay)
-  for k, v in pairs(DEFAULTS) do self.config[k] = v end
-  for k, v in pairs(config or {}) do self.config[k] = v end
+  for k, v in pairs(DEFAULTS) do
+    self.config[k] = v
+  end
+  for k, v in pairs(config or {}) do
+    self.config[k] = v
+  end
   return self
 end
 
 local ERROR_TITLES = {
-  skipped_step = "skipped a direction", too_slow = "too slow", early_button = "button too early",
-  late_button = "button too late", cancelled = "cancelled", missing_step = "incomplete motion",
-  other_move = "different move", not_allowed = "refused by the game",
+  skipped_step = "skipped a direction",
+  too_slow = "too slow",
+  early_button = "button too early",
+  late_button = "button too late",
+  cancelled = "cancelled",
+  missing_step = "incomplete motion",
+  other_move = "different move",
+  not_allowed = "refused by the game",
 }
 
 function Overlay.error_title(code)
@@ -62,24 +71,41 @@ end
 function Overlay.bench_lines(summary)
   local lines = {}
   local head = summary.running and "BENCH running" or "BENCH result"
-  if summary.target then head = head .. " (one move)" end
+  if summary.target then
+    head = head .. " (one move)"
+  end
   table.insert(lines, { head, "warn" })
   if #summary.moves == 0 then
     table.insert(lines, { "no attempts yet", "dim" })
   end
   for i, m in ipairs(summary.moves) do
-    if i > 3 then break end
+    if i > 3 then
+      break
+    end
     local sides = {}
     for _, side in ipairs({ "left", "right" }) do
       local s = m.sides[side]
-      if s then table.insert(sides, "facing " .. side .. " " .. s.rate .. "%") end
+      if s then
+        table.insert(sides, "facing " .. side .. " " .. s.rate .. "%")
+      end
     end
-    table.insert(lines, { string.format("%s %s  %d/%d  %d%%  %s", m.name, m.notation, m.ok, m.n, m.rate or 0, table.concat(sides, "  ")), "text" })
+    table.insert(lines, {
+      string.format("%s %s  %d/%d  %d%%  %s", m.name, m.notation, m.ok, m.n, m.rate or 0, table.concat(sides, "  ")),
+      "text",
+    })
     local detail = {}
-    if m.top_error then table.insert(detail, "most common: " .. Overlay.error_title(m.top_error.code) .. " (" .. m.top_error.count .. ")") end
-    if m.n > 10 then table.insert(detail, "first 10 " .. m.first_rate .. "% > last 10 " .. m.last_rate .. "%") end
-    if m.median_margin then table.insert(detail, "median margin " .. m.median_margin .. "f") end
-    if #detail > 0 then table.insert(lines, { table.concat(detail, "  "), "dim" }) end
+    if m.top_error then
+      table.insert(detail, "most common: " .. Overlay.error_title(m.top_error.code) .. " (" .. m.top_error.count .. ")")
+    end
+    if m.n > 10 then
+      table.insert(detail, "first 10 " .. m.first_rate .. "% > last 10 " .. m.last_rate .. "%")
+    end
+    if m.median_margin then
+      table.insert(detail, "median margin " .. m.median_margin .. "f")
+    end
+    if #detail > 0 then
+      table.insert(lines, { table.concat(detail, "  "), "dim" })
+    end
   end
   return lines
 end
@@ -93,16 +119,28 @@ function Overlay:draw(canvas, view)
     local verdict = a.ok and "OUT" or ("MISSED: " .. Overlay.error_title(a.error and a.error.code or "?"))
     table.insert(lines, { a.move .. " " .. a.notation .. "   " .. verdict, a.ok and "good" or "bad" })
     table.insert(lines, { Overlay.steps_line(a), "text" })
-    if not a.ok and a.error then table.insert(lines, { a.error.text, "warn" }) end
+    if not a.ok and a.error then
+      table.insert(lines, { a.error.text, "warn" })
+    end
     local timing = Overlay.timing_line(a)
-    if timing ~= "" then table.insert(lines, { timing, "dim" }) end
+    if timing ~= "" then
+      table.insert(lines, { timing, "dim" })
+    end
   end
   if view.bench then
-    for _, l in ipairs(Overlay.bench_lines(view.bench)) do table.insert(lines, l) end
+    for _, l in ipairs(Overlay.bench_lines(view.bench)) do
+      table.insert(lines, l)
+    end
   end
-  if view.target_name then table.insert(lines, { "target: " .. view.target_name, "dim" }) end
-  if view.help then table.insert(lines, { view.help, "dim" }) end
-  if #lines == 0 then return end
+  if view.target_name then
+    table.insert(lines, { "target: " .. view.target_name, "dim" })
+  end
+  if view.help then
+    table.insert(lines, { view.help, "dim" })
+  end
+  if #lines == 0 then
+    return
+  end
   local height = #lines * c.line_h + 6
   local y0 = c.y
   canvas:box(c.x, y0, c.x + c.width, y0 + height, "panel", "edge")

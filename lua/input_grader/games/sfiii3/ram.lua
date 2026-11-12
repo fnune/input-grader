@@ -7,7 +7,6 @@ local C = require("input_grader.games.sfiii3.constants")
 
 local M = {}
 
-M.SLOT_TABLE = 0x06613968 -- pl_cmd_list in the program ROM: 21 fighters x 56 record pointers
 M.WORK_CP = { 0x02026318, 0x0202671E }
 M.WAZA_WORK = { 0x020256C4, 0x02025CE4 }
 M.PLAYER = { 0x02068C6C, 0x02069104 }
@@ -21,7 +20,7 @@ Ram.__index = Ram
 --- @param mem table { u8 = fn(addr), u16 = fn(addr), s16 = fn(addr), u32 = fn(addr) }
 --- @param player number 1 or 2
 function M.new(mem, player)
-  return setmetatable({ mem = mem, player = player, records = {} }, Ram)
+  return setmetatable({ mem = mem, player = player, idle_ptr = {} }, Ram)
 end
 
 function Ram:in_match()
@@ -58,7 +57,9 @@ end
 function Ram:airborne_at_check()
   local was = self.was_airborne
   self.was_airborne = self:airborne()
-  if was == nil then return self.was_airborne end
+  if was == nil then
+    return self.was_airborne
+  end
   return was
 end
 
@@ -73,13 +74,21 @@ function Ram:read_input()
   return raw, { facing_right = self:facing_right(), airborne = self:airborne_at_check() }
 end
 
-local function record_address(self, slot)
+-- Each slot's w_ptr points at the next step of its record (24-byte header, 8-byte steps). An
+-- idle slot points just past step 1, the smallest value w_ptr ever takes, so the smallest value
+-- seen per slot is that slot's "waiting for step 1" address. No ROM address is needed, which
+-- keeps this independent of the ROM revision and of whether the emulator lets Lua read ROM.
+local function next_step_index(self, slot, w_ptr)
   local row = self:fighter_row()
-  local key = row * 64 + slot
-  if not self.records[key] then
-    self.records[key] = self.mem.u32(M.SLOT_TABLE + 4 * (row * C.SLOTS + slot))
+  if self.calibrated_row ~= row then
+    self.idle_ptr, self.calibrated_row = {}, row
   end
-  return self.records[key]
+  local idle = self.idle_ptr[slot]
+  if not idle or w_ptr < idle then
+    idle = w_ptr
+    self.idle_ptr[slot] = idle
+  end
+  return math.floor((w_ptr - idle) / 8) + 2
 end
 
 --- Every command slot's state: waza_flag and the WAZA_WORK fields, with w_ptr turned into the
@@ -94,11 +103,17 @@ function Ram:read_commands(active)
       local a = work + M.WORK_SIZE * slot
       local w_ptr = mem.u32(a + 8)
       state.work[slot] = {
-        w_type = mem.s16(a), w_int = mem.s16(a + 2), free1 = mem.s16(a + 4),
-        w_lvr = mem.u16(a + 6), free2 = mem.s16(a + 12),
-        flag = mem.s16(a + 18), shot_flag = mem.s16(a + 20), shot_flag2 = mem.s16(a + 22),
-        free3 = mem.s16(a + 24), shot_ok = mem.s16(a + 26),
-        ptr = math.floor((w_ptr - record_address(self, slot) - 24) / 8) + 1,
+        w_type = mem.s16(a),
+        w_int = mem.s16(a + 2),
+        free1 = mem.s16(a + 4),
+        w_lvr = mem.u16(a + 6),
+        free2 = mem.s16(a + 12),
+        flag = mem.s16(a + 18),
+        shot_flag = mem.s16(a + 20),
+        shot_flag2 = mem.s16(a + 22),
+        free3 = mem.s16(a + 24),
+        shot_ok = mem.s16(a + 26),
+        ptr = next_step_index(self, slot, w_ptr),
       }
     end
   end

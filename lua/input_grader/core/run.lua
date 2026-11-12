@@ -18,11 +18,30 @@ local function guarded(platform, name, fn)
 end
 
 function M.attach(platform, app)
-  platform.on_frame(guarded(platform, "frame", function() app:frame() end))
-  platform.on_draw(guarded(platform, "draw", function() app:draw(platform.canvas) end))
-  platform.hotkey(M.HOTKEYS.bench, guarded(platform, "bench", function() app:toggle_bench() end))
-  platform.hotkey(M.HOTKEYS.target, guarded(platform, "target", function() app:cycle_target() end))
-  platform.hotkey(M.HOTKEYS.visible, guarded(platform, "hide", function() app:toggle_visible() end))
+  platform.on_frame(guarded(platform, "frame", function()
+    app:frame()
+  end))
+  platform.on_draw(guarded(platform, "draw", function()
+    app:draw(platform.canvas)
+  end))
+  platform.hotkey(
+    M.HOTKEYS.bench,
+    guarded(platform, "bench", function()
+      app:toggle_bench()
+    end)
+  )
+  platform.hotkey(
+    M.HOTKEYS.target,
+    guarded(platform, "target", function()
+      app:cycle_target()
+    end)
+  )
+  platform.hotkey(
+    M.HOTKEYS.visible,
+    guarded(platform, "hide", function()
+      app:toggle_visible()
+    end)
+  )
 end
 
 return M

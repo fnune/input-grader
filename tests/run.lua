@@ -2,7 +2,12 @@
 package.path = "lua/?.lua;lua/?/init.lua;tests/?.lua;" .. package.path
 
 local files = {
-  "test_checker", "test_inputs", "test_grader", "test_bench", "test_overlay", "test_launcher",
+  "test_checker",
+  "test_inputs",
+  "test_grader",
+  "test_bench",
+  "test_overlay",
+  "test_launcher",
 }
 
 local passed, failed = 0, {}
@@ -23,5 +28,7 @@ for _, name in ipairs(files) do
 end
 
 print(string.format("%d passed, %d failed (%s)", passed, #failed, _VERSION))
-for _, f in ipairs(failed) do print("FAIL " .. f) end
+for _, f in ipairs(failed) do
+  print("FAIL " .. f)
+end
 os.exit(#failed == 0 and 0 or 1)

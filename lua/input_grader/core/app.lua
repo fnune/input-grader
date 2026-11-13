@@ -27,6 +27,9 @@ function App.new(deps)
     return ""
   end
   self.avoid = deps.avoid or {}
+  self.active = deps.active or function()
+    return true
+  end
   self.card_y = deps.y or App.CARD_Y
   self.attempts, self.shown = {}, nil
   self.visible = true
@@ -67,6 +70,11 @@ end
 --- blocking): tables of name -> true. Pad names: up, down, left, right, LP .. HK.
 function App:controls(keys, pad)
   local k, p = keys or {}, pad or {}
+  if not self.active() then
+    self.picker_open = false
+    self.prev_keys, self.prev_pad = k, p
+    return
+  end
   if pressed(k, self.prev_keys, "M") then
     self:toggle_picker()
   elseif self.picker_open then
@@ -155,7 +163,7 @@ function App:stale()
 end
 
 function App:draw(canvas)
-  if not self.visible then
+  if not self.visible or not self.active() then
     return
   end
   if self.picker_open then
@@ -169,8 +177,15 @@ function App:draw(canvas)
   local fit = layout.panel(self.card_y - 22, self.card_y + card.HEIGHT, self.avoid)
   local shown = self.shown or #self.attempts
   local attempt = self.attempts[shown]
+  local legend_y = self.card_y - card.NAME_H - 9
+  local legend_x = fit.x1 + 1
+  if self.bench.running then
+    local counter = bench_panel.counter(self.bench:summary())
+    canvas:text(legend_x, legend_y, counter, COL.gold)
+    legend_x = legend_x + draw.CHAR_W * (#counter + 3)
+  end
+  canvas:text(legend_x, legend_y, App.HELP, COL.dim)
   if not attempt then
-    canvas:text(fit.x1 + 1, self.card_y + 30, App.HELP, COL.dim)
     return
   end
   local card_canvas = self:stale() and draw.faded(canvas, App.STALE_FADE) or canvas
@@ -181,9 +196,6 @@ function App:draw(canvas)
     target = self.target ~= nil and attempt.id == self.target.id,
   })
   pearls.draw(canvas, box, self.attempts, shown)
-  if self.bench.running then
-    canvas:text(fit.x1 + 1, self.card_y - card.NAME_H - 9, bench_panel.counter(self.bench:summary()), COL.gold)
-  end
 end
 
 return App

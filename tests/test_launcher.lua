@@ -64,7 +64,10 @@ return {
   {
     "the FBNeo entry script runs a frame and draws against the fake API",
     function()
-      local env = fake_fbneo()
+      local ram = require("input_grader.games.sfiii3.ram")
+      local env = fake_fbneo(function(a)
+        return a == ram.MATCH_STATE and ram.IN_MATCH or 0
+      end)
       local saved = {}
       for _, k in ipairs({ "emu", "gui", "savestate", "input", "memory", "print" }) do
         saved[k] = _G[k]

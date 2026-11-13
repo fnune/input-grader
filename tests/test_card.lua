@@ -348,6 +348,41 @@ return {
     end,
   },
   {
+    "app: outside a match (character select) nothing is drawn",
+    function()
+      local in_match = false
+      local app = App.new({
+        game = {
+          update = function()
+            return { attempt(CLEAN) }
+          end,
+          moves = function()
+            return {}
+          end,
+          set_target = function() end,
+        },
+        bench = Bench.new(function()
+          return 0
+        end),
+        clock = function()
+          return 0
+        end,
+        active = function()
+          return in_match
+        end,
+      })
+      app:frame()
+      local c = canvas()
+      app:draw(c)
+      T.eq(#c.texts, 0)
+      in_match = true
+      c = canvas()
+      app:draw(c)
+      T.truthy(c:has_text("HADOKEN"), "card")
+      T.truthy(c:has_text(App.HELP), "the key legend stays on screen with a card")
+    end,
+  },
+  {
     "app: with no attempt yet, a line of help is shown",
     function()
       local game = {

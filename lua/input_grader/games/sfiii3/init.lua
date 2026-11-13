@@ -28,6 +28,9 @@ function M.build(platform, options)
     timestamp = platform.timestamp,
     log = options.log_path and platform.appender(options.log_path, csv.HEADER) or nil,
     avoid = { M.FIGHTCADE_INPUT_DISPLAY },
+    active = function()
+      return source.ram:in_match()
+    end,
   })
 end
 

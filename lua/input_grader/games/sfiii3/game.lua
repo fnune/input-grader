@@ -449,10 +449,34 @@ function Game:trace(p, pick)
     end
     table.insert(trace.steps, s)
   end
+  trace.optional = Game.optional_directions(record)
   trace.button_at = p.frame - origin
   trace.button_window = record.reset - 2
   trace.complete_at = run.complete and (run.complete - origin) or nil
   return trace
+end
+
+--- Directions in the move's notation after the last one the game checks: the final 6 of 236236+P,
+--- which players often do but the game does not need. Empty when the steps cover the notation.
+function Game.optional_directions(record)
+  local digits = {}
+  for d in (record.notation:match("^(%d+)") or ""):gmatch("%d") do
+    table.insert(digits, d)
+  end
+  local labels = {}
+  for _, step in ipairs(record.steps) do
+    table.insert(labels, step_label(step))
+  end
+  for i, label in ipairs(labels) do
+    if digits[i] ~= label then
+      return {}
+    end
+  end
+  local rest = {}
+  for i = #labels + 1, #digits do
+    table.insert(rest, tonumber(digits[i]))
+  end
+  return rest
 end
 
 Game.step_label = step_label

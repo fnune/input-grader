@@ -173,6 +173,12 @@ function reason(a) {
 
 // "used/allowed" text over a bar as long as the window (2 px a frame), filled to the frames used.
 // Green with room to spare, yellow in the last 2 frames, red past the end.
+// A box outline drawn every other pixel: something optional.
+function dashed(x1, y1, x2, y2, c) {
+  for (let x = x1; x <= x2; x += 2) { gui.pixel(x, y1, c); gui.pixel(x, y2, c); }
+  for (let y = y1; y <= y2; y += 2) { gui.pixel(x1, y, c); gui.pixel(x2, y, c); }
+}
+
 function meter(x, y, used, window) {
   const PX = 2, w = window * PX, label = `${used}/${window}`;
   const left = x - Math.floor(w / 2);
@@ -218,7 +224,7 @@ function columns(a) {
   t.steps.forEach((s, k) => {
     if (reach[k] === undefined && k > 0) {
       const d = Number(s.label);
-      const f = t.frames.findIndex((fr, i) => i + 1 > last && i + 1 <= t.button_at && fr.dir === d) + 1;
+      const f = t.frames.findIndex((fr, i) => i + 1 > last && i + 1 <= Math.max(t.button_at, t.complete_at || 0) && fr.dir === d) + 1;
       if (f > 0) reach[k] = f;
     }
     if (reach[k] !== undefined) last = reach[k];
@@ -229,12 +235,20 @@ function columns(a) {
   // Step 1 shows only the hold that it matched.
   let start1 = first;
   while (start1 > 1 && t.frames[start1 - 2].dir === t.frames[first - 1].dir) start1--;
-  for (let f = start1; f <= Math.min(n, t.button_at); f++) {
+  // An early button is shown where it was pressed, and the motion is followed to its end.
+  const early = t.complete_at !== undefined && t.complete_at !== null && t.button_at < t.complete_at;
+  const end = early ? t.complete_at : t.button_at;
+  for (let f = start1; f <= Math.min(n, end); f++) {
     const k = reach.findIndex(at => at !== undefined && at >= f);
     const frame = t.frames[f - 1];
-    if (f === t.button_at) {
-      buttonCol.push({ dir: 0, press: frame.press });
-      if (k >= 0 && reach[k] === f) cols[k].push({ dir: frame.dir, press: "" });
+    if (early && k >= 0) {
+      cols[k].push(frame);
+    } else if (f === t.button_at) {
+      // The press, with the direction held on that frame unless a step was accepted on it
+      // (the optional last 6 of a super pressed together with the punch shows as 6+P).
+      const stepHere = k >= 0 && reach[k] === f;
+      buttonCol.push({ dir: stepHere ? 0 : frame.dir, press: frame.press });
+      if (stepHere) cols[k].push({ dir: frame.dir, press: "" });
     } else if (k >= 0) cols[k].push(frame);
     else buttonCol.push({ dir: frame.dir, press: frame.press });
   }
@@ -254,12 +268,13 @@ function runsOf(frames) {
 
 const RUN_W = r => (r.dir ? 10 : 0) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
 
-function drawRuns(cx, y, runs, color) {
+function drawRuns(cx, y, runs, color, culprit = () => false) {
   const widths = runs.map(r => Math.max(RUN_W(r), 9));
   const total = widths.reduce((s, w) => s + w, 0) + 3 * Math.max(runs.length - 1, 0);
   let x = cx - Math.floor(total / 2);
   runs.forEach((r, i) => {
     let ix = x;
+    if (culprit(r)) gui.box(x - 2, y - 2, x + Math.max(RUN_W(r), 9) + 1, y + 10, 0xFF5A5A60, COL.bad);
     if (r.dir === 5) gui.box(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
@@ -293,8 +308,9 @@ function drawLane(a, opt) {
   const colW = k => {
     const runs = k < t.steps.length ? runsOf(cols[k]) : runsOf(buttonCol);
     const win = k < t.steps.length ? (t.steps[k].window || 0) : t.button_window;
+    const extra = k < t.steps.length ? 0 : (t.optional || []).length * 16;
     const runsW = runs.reduce((s, r) => s + Math.max(RUN_W(r), 9) + 3, 0);
-    return Math.max(30, win * 2 + 8, runsW + 6);
+    return Math.max(30, win * 2 + 8, runsW + 6) + extra;
   };
   const ny = y0 + 12, ry = y0 + 24, my = y0 + 45;
   let cx = gx;
@@ -305,14 +321,22 @@ function drawLane(a, opt) {
     if (k === t.steps.length) {
       // The button column.
       const c = ok ? COL.good : (r.button ? COL.bad : COL.button);
-      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
+      // Optional directions (the last 6 of 236236+P) sit before the button in dashed boxes.
+      const opt = t.optional || [];
+      let bx = mid + opt.length * 8;
+      opt.forEach((d, i) => {
+        const ox = mid - opt.length * 8 + i * 16 - 1;
+        dashed(ox - 7, ny - 7, ox + 7, ny + 7, COL.dim);
+        gui.image(ox - 4, ny - 4, dirKey(d), 9, 9);
+      });
+      gui.box(bx - 7, ny - 7, bx + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
-      if (btn) gui.image(mid - 5, ny - 5, btn, 11, 11);
+      if (btn) gui.image(bx - 5, ny - 5, btn, 11, 11);
       drawRuns(mid, ry, runsOf(buttonCol).filter(r => r.press || r.dir), COL.dim);
       if (t.complete_at !== undefined && t.complete_at !== null) {
         const after = t.button_at - t.complete_at;
         if (after >= 0) meter(mid, my, after, t.button_window);
-        else gui.text(mid - 2 * `${-after}F EARLY`.length, my, `${-after}F EARLY`, COL.bad);
+        else gui.text(mid - 2 * 5, my, "EARLY", COL.bad);
       }
     } else {
       const s = t.steps[k], d = Number(s.label), prev = reach[k - 1];
@@ -325,9 +349,14 @@ function drawLane(a, opt) {
         gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);
       }
       const runs = runsOf(cols[k]);
-      if (runs.length) drawRuns(mid, ry, runs, COL.dim);
+      // The input that broke the attempt, marked red: the up that cancelled the motion.
+      const culprit = run =>
+        (missed && a.error.code === "cancelled" && run.dir === 8) ||
+        (a.error && a.error.code === "early_button" && run.press !== "");
+      if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
       else gui.text(mid - 6, ry + 1, "---", COL.bad);
       if (k === 0) gui.text(mid - 10, my, "START", COL.dim);
+      else if (missed && a.error.code === "cancelled") gui.text(mid - 2 * 9, my, "CANCELLED", COL.bad);
       else if (s.window && prev !== undefined && reach[k] !== undefined) meter(mid, my, reach[k] - prev, s.window);
     }
     cx += w;

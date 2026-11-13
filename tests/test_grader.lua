@@ -150,4 +150,13 @@ return {
       T.eq(a.error.code, "other_move")
     end,
   },
+  {
+    "the super's last 6 is optional: notation minus the steps the game checks",
+    function()
+      local opt = Game.optional_directions(T.fighter(2).slots[20])
+      T.eq(#opt, 1)
+      T.eq(opt[1], 6)
+      T.eq(#Game.optional_directions(T.fighter(2).slots[29]), 0)
+    end,
+  },
 }

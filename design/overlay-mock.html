@@ -541,8 +541,8 @@ function drawLane(a, opt) {
     }
     cx += w + GAP;
   }
-  // Centred on the corner: its arms lie along the top and right borders.
-  if (safe) star(x1 - 4, y0 - 4);
+  // On the corner, nudged 1 px in, so it sits over the bevel.
+  if (safe) star(x1 - 5, y0 - 3);
   return { x0, x1, y0, y1: y0 + height };
 }
 

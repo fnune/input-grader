@@ -1,3 +1,4 @@
+-- No requires, so one failing check cannot hide the others (docs/smoke-test.md).
 local results, order = {}, {}
 local write_log
 local lines_out = {}

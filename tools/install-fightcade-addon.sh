@@ -14,6 +14,7 @@ if [[ ! -f "${training}/fbneo-training-mode.lua" ]]; then
   exit 1
 fi
 
+# The Flatpak's start only copies its originals over, so this survives (see "FBNeo training mode" in /app/bin/fightcade).
 addon="${training}/games/sfiii3/addon"
 mkdir -p "${addon}"
 printf 'addons_run = { "input_grader.lua" }\n' > "${addon}/addons.lua"

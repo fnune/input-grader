@@ -14,6 +14,7 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAll = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
+      # The host's LD_LIBRARY_PATH holds libraries built against another glibc, which break MAME.
       mameRun = pkgs: name: script: pkgs.writeShellApplication {
         inherit name;
         runtimeInputs = [ pkgs.mame pkgs.python3 ];

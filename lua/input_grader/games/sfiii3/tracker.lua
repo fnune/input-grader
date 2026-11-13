@@ -58,6 +58,8 @@ function Tracker:update(state, dead, started)
     local run = current_run(self, slot)
     local open = run and not run.done
 
+    -- waza_compel_init clears the flag before RAM shows it:
+    -- https://github.com/gibletto/sfIII3-cps3-decomp/blob/d440837/src/cmd_main_2.c#L1724
     local completed = flag > before_flag or (started == slot and before_flag <= 0)
     if completed then
       if not open or before_p == 0 then

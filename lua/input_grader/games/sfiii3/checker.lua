@@ -379,6 +379,7 @@ local function check_7()
   w.w_int = w.w_int - 1
   local first_counter, first_flag = C.CNT_S1, C.SW_LP
   if w.w_type ~= CK.SHOT_P then
+    -- Game quirk, kept: https://github.com/gibletto/sfIII3-cps3-decomp/blob/d440837/src/cmd_main_2.c#L587
     first_counter, first_flag = C.CNT_S1 + 3, C.SW_LK
   end
   count_releases(first_counter, 3, first_flag, function(c)

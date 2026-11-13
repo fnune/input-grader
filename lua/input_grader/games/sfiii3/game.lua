@@ -13,7 +13,7 @@ local CK = C.CK
 local Game = {}
 Game.__index = Game
 
-local DEFAULTS = { lookback = 60, settle = 12 }
+local DEFAULTS = { lookback = 60, settle = 12, late_grace = 8, unfinished_gap = 3 }
 
 -- Steps whose `time` is the number of frames allowed since the previous step matched.
 local TIMED = {
@@ -201,7 +201,7 @@ function Game:update()
     if self.pending then
       finish()
     end
-    self.pending = { frame = frame, pressed = pressed, facing_right = obs.facing_right }
+    self.pending = { frame = frame, pressed = pressed, facing_right = obs.facing_right, airborne = obs.airborne }
   end
   if obs.started then
     if self.pending and frame - self.pending.frame <= self.options.settle then
@@ -217,6 +217,7 @@ function Game:update()
         started = obs.started,
         started_frame = frame,
         facing_right = obs.facing_right,
+        airborne = obs.airborne,
       }
     end
     finish()
@@ -236,43 +237,87 @@ end
 
 -- One matched step is an attempt only when a later step's direction followed it (2 then 6
 -- for a Hadoken), so a crouching normal does not count as a failed Hadoken.
-local function later_step_seen(self, record, run, last)
-  if not run.steps[1] then
-    return false
+-- How much of a motion the player did, in order: the steps the game accepted, then the remaining
+-- directions as they followed in the input history (one may be missing, for a skipped
+-- diagonal). Returns the count and the frame of the last of them.
+local function evidence(self, record, run, last_frame)
+  local n, last = 0, run.start
+  while run.steps[n + 1] do
+    n = n + 1
+    last = run.steps[n]
   end
-  for k = 2, #record.steps do
-    local step = record.steps[k]
+  if run.complete then
+    return #record.steps, run.complete
+  end
+  local cursor, skipped = last, false
+  for k = n + 1, #record.steps do
+    local step, found = record.steps[k], nil
     if LEVER_STEPS[step[1]] then
-      for _, h in ipairs(self.history:range(run.steps[1] + 1, last)) do
+      for _, h in ipairs(self.history:range(cursor + 1, last_frame)) do
         if lever_matches(step, h.lever) then
-          return true
+          found = h.frame
+          break
         end
       end
     end
+    if found then
+      n, cursor, last = n + 1, found, found
+    elseif not skipped then
+      skipped = true
+    else
+      break
+    end
   end
-  return false
+  return n, last
+end
+
+-- Whether a press is an attempt at this move, or just a button pressed while moving around.
+-- Untargeted: at least half the motion (and 2 directions) in order, ending close to the button.
+-- Targeted: any of the motion, ending close to the button. Both shown by tests/test_intent.lua.
+function Game:is_attempt(record, run, p, targeted)
+  if p.started and p.started.slot == run.slot then
+    return true
+  end
+  local n, last = evidence(self, record, run, p.frame + self.options.settle)
+  local needed = targeted and 1 or math.max(2, math.ceil(#record.steps / 2))
+  if n < math.min(needed, #record.steps) then
+    return false
+  end
+  -- A finished motion may be followed by a late button (shown as late). An unfinished one counts
+  -- only while it was still going when the button came: a crouch held for a while before a
+  -- cr.HP is not a missed Shoryuken.
+  if run.complete then
+    return p.frame - last <= record.reset - 2 + self.options.late_grace
+  end
+  return p.frame - last <= self.options.unfinished_gap
+end
+
+-- Ground moves (super arts from slot 20, specials from 28) only on the ground, air ones (from
+-- 38) only in the air.
+local function ground_matches(slot, airborne)
+  local air = slot >= C.SA_AIR
+  return air == (airborne == true)
 end
 
 local function choose(self, p)
   local best, best_score
   local since = p.frame - self.options.lookback
   for slot, record in pairs(self.fighter.slots) do
-    if candidate(self, slot, record, self.flags) then
+    if candidate(self, slot, record, self.flags) and ground_matches(slot, p.airborne) then
       local id = self.fighter.name .. ":" .. slot
-      local wanted = not self.options.target or self.options.target == id
+      local targeted = self.options.target == id
+      local wanted = not self.options.target or targeted
       local fits = button_fits(record, p.pressed) or (p.started and p.started.slot == slot)
       local run = wanted and fits and self.tracker:best_run(slot, since)
-      if run then
+      if run and self:is_attempt(record, run, p, targeted) then
         local n, total = count(run.steps), #record.steps
-        if n >= math.min(2, total) or later_step_seen(self, record, run, p.frame) then
-          local score = n / total
-          local better = not best
-            or score > best_score
-            or (score == best_score and p.started and p.started.slot == slot)
-            or (score == best_score and not (p.started and p.started.slot == best.slot) and total > #best.record.steps)
-          if better then
-            best, best_score = { slot = slot, record = record, run = run, id = id }, score
-          end
+        local score = n / total
+        local better = not best
+          or score > best_score
+          or (score == best_score and p.started and p.started.slot == slot)
+          or (score == best_score and not (p.started and p.started.slot == best.slot) and total > #best.record.steps)
+        if better then
+          best, best_score = { slot = slot, record = record, run = run, id = id }, score
         end
       end
     end

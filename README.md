@@ -141,6 +141,8 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 - A validation run on Fightcade's `sfiii3nr1` set.
 - P2 support, so you can grade from either side of a netplay or training session.
 - A training journal: progress per move over days and weeks, built from the attempt log.
+- Browsing old attempts: keep the last 20 cards, a row of dots under the card for recent results, and two keys (for example `[` and `]`, read with `input.get()` since FBNeo's Alt hotkeys are mostly taken) to step back and forward.
+- Grading timing after an action, starting with dash into throw: whether the throw came before you could act, whether LP and LK were pressed together, and range or throw invulnerability.
 - A move cheatsheet on a hotkey: the current character's specials and selected super art, drawn with the same icons as the grid, with each step's window and the optional last directions. The command tables already hold everything it needs.
 - A pinned FBNeo build under Wine in the flake, to try the script without Fightcade. FBNeo's Lua only exists in its Windows build, and its command line takes a game or a script but not both, so this would be a manual check rather than an automated one.
 - Other games, using the porting interfaces.

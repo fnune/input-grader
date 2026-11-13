@@ -36,7 +36,7 @@ return {
     "a missed attempt names the error in red and explains it",
     function()
       local c = canvas()
-      Overlay.new():draw(c, { attempt = ATTEMPT, attempt_age = 0 })
+      Overlay.new():draw(c, { attempt = ATTEMPT })
       T.contains(c.texts[1][1], "MISSED: skipped a direction")
       T.eq(c.texts[1][2], "bad")
       T.eq(c.texts[3][1], "went from 2 to 6 without 3")
@@ -44,11 +44,11 @@ return {
     end,
   },
   {
-    "the card disappears after a few seconds",
+    "the card stays until the next attempt, however long ago it was",
     function()
       local c = canvas()
-      Overlay.new():draw(c, { attempt = ATTEMPT, attempt_age = 30 })
-      T.eq(#c.texts, 0)
+      Overlay.new():draw(c, { attempt = ATTEMPT })
+      T.contains(c.texts[1][1], "MISSED")
     end,
   },
   {

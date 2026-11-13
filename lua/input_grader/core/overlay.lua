@@ -8,7 +8,7 @@ local layout = require("input_grader.core.layout")
 local Overlay = {}
 Overlay.__index = Overlay
 
-local DEFAULTS = { x = 8, y = 150, width = 368, char_w = 4, line_h = 9, card_seconds = 4 }
+local DEFAULTS = { x = 8, y = 150, width = 368, char_w = 4, line_h = 9 }
 
 function Overlay.new(config)
   local self = setmetatable({ config = {} }, Overlay)
@@ -112,12 +112,13 @@ function Overlay.bench_lines(summary)
   return lines
 end
 
---- @param view table { attempt, attempt_age (seconds), bench (summary or nil), help (string or nil),
+--- @param view table { attempt, bench (summary or nil), help (string or nil),
 ---   target_name, avoid (rectangles to keep clear) }
 function Overlay:draw(canvas, view)
   local c = self.config
   local lines = {}
-  if view.attempt and (view.attempt_age or 0) <= c.card_seconds then
+  -- The card stays until the next attempt replaces it, or the overlay is hidden.
+  if view.attempt then
     local a = view.attempt
     local verdict = a.ok and "OUT" or ("MISSED: " .. Overlay.error_title(a.error and a.error.code or "?"))
     table.insert(lines, { a.move .. " " .. a.notation .. "   " .. verdict, a.ok and "good" or "bad" })

@@ -9,6 +9,7 @@ local files = {
   "test_overlay",
   "test_launcher",
   "test_layout",
+  "test_intent",
 }
 
 local passed, failed = 0, {}

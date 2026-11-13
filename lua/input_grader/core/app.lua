@@ -29,7 +29,7 @@ end
 
 function App:frame()
   for _, attempt in ipairs(self.game:update()) do
-    self.last, self.last_at = attempt, self.clock()
+    self.last = attempt
     self.bench:record(attempt)
     if self.log then
       self.log(csv.row(self.timestamp(), attempt))
@@ -65,7 +65,6 @@ function App:draw(canvas)
   local now = self.clock()
   self.overlay:draw(canvas, {
     attempt = self.last,
-    attempt_age = self.last_at and (now - self.last_at) or nil,
     bench = self.show_bench and self.bench:summary() or nil,
     target_name = self.target and (self.target.name .. " " .. self.target.notation) or nil,
     help = (now - self.started_at < 10) and App.HELP or nil,

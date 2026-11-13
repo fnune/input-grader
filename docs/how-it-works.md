@@ -72,7 +72,16 @@ Frames are counted in check frames, the clock the game's windows use, so super f
 
 ### Picking the intended move
 
-Candidates are the character's specials and the selected super art that fit the button. The run that got furthest wins; ties go to the move that came out, then the longer motion. One matched step counts as an attempt only when a later step's direction followed (2 then 6 for a Hadoken), so a crouching normal is not reported as a failed Hadoken.
+A button press is graded only when it looks like an attempt at a special move, so moving around and pressing buttons between reps stays silent. A move qualifies when its button fits the press and:
+
+- **The game started it.** Always graded, as out.
+- **Most of its motion is there, in order.** At least half its directions and at least 2: the steps the game accepted, then the remaining directions as they followed, allowing one to be missing (a skipped diagonal).
+- **The motion ended close to the button.** A finished motion may be followed by a late button, up to 8 frames past the button window, which is graded as late. An unfinished motion counts only if its last direction came within 3 frames of the button, so a crouch held for a while before a cr.HP is not a missed Shoryuken.
+- **It's on the right ground.** Ground moves only on the ground, air moves only in the air.
+
+With a target move set (Alt+8), only that move is considered, and any of its motion ending close to the button counts. That's the mode for drilling one move while moving freely in between. Among qualifying moves, the one that got furthest wins; ties go to the move that came out, then the longer motion.
+
+`tests/test_intent.lua` pins this against ordinary play: dashes, jumps, walking, crouch-blocking, normals and throws produce no attempt. One input stays ambiguous by nature: crouch, roll to down-forward and press a punch is both a cr.LP and a Hadoken missing its 6, and is graded as the latter.
 
 ### Verdicts
 

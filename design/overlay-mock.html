@@ -311,12 +311,10 @@ function drawLane(a, opt) {
   for (let k = 0; k <= t.steps.length; k++) gridW += colW(k);
   const x1 = Math.min(fit.x2, x0 + 4 + gridW + 4);
 
-  // The tab: move name and the one-line reason, untinted, on top of the box.
+  // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
-  const tabW = 4 * name.length + 8 + 6 + partsWidth(r.parts);
-  gui.box(x0, y0 - tabH, x0 + tabW, y0, COL.panel, verdict);
-  gui.text(x0 + 4, y0 - tabH + 3, name, COL.text);
-  inline(x0 + 4 + 4 * name.length + 6, y0 - tabH + 3, r.parts, ok ? COL.dim : COL.warn);
+  gui.text(x0 + 1, y0 - tabH + 2, name, COL.text);
+  inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, r.parts, ok ? COL.dim : COL.warn);
 
   // The box, tinted with the verdict.
   gui.box(x0, y0, x1, y0 + height, COL.panel, verdict);

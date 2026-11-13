@@ -241,3 +241,9 @@ Grading feasibility: medium-hard. Needs both players' state plus the next move's
 - `uot_cd_ok_flag` is set in flight (`first_flight_union`) rather than at touchdown; exact start of the 6-frame ukemi window per knockdown type not traced.
 - Throw-range pixel maths assumes cat_box / cau_box sign and mirroring as read from the table comments.
 - Hop-dash lengths (most forward dashes and many back dashes) are physics, not tabled.
+
+## Measured: first actionable frame after Ryu's forward dash (MAME, `harness/mame/actionable.lua`)
+
+- From the frame after the dash's last input, a jab held on frame 12 or earlier is dropped; from 13 on it comes out.
+- The game reads a held input one frame after the script sets it. In RAM terms the rule is: a press that appears in `WORK_CP.sw_new` on frame F is accepted when the animation tag (`cg_type`, WORK +533) stored at the end of frame F-1 is 2, 3 or 64. Here: press read on frame 13 with the tag still 0 after frame 12, dropped; press read on frame 14 with the tag 2 after frame 13, accepted.
+- So "first frame you could act" and "frames early" can be computed from RAM alone. Standing and walking states carry tag 0 but always allow acting; the tag only gates inside restricted states (dash, landing, recovery).

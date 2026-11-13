@@ -575,6 +575,10 @@ function Game:trace(p, pick)
     if run.steps[k] then
       s.at = run.steps[k] - origin
     end
+    -- "6, then let go" (the Shoryuken's first step): accepted on the release.
+    if step[1] == CK.LEVER_OFF then
+      s.release = true
+    end
     if k > 1 and TIMED[step[1]] and step[2] > 0 then
       s.window = step[2]
     end

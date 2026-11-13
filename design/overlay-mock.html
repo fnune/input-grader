@@ -346,9 +346,14 @@ function columns(a) {
   const cols = t.steps.map(() => []);
   const buttonCol = [];
   const first = reach[0] !== undefined ? reach[0] : 1;
-  // Step 1 shows only the hold that it matched.
+  // Step 1 shows the hold that it matched. A "then let go" step is accepted on the release, so the
+  // hold of its own direction before that is shown too.
   let start1 = first;
   while (start1 > 1 && t.frames[start1 - 2].dir === t.frames[first - 1].dir) start1--;
+  if (t.steps[0] && t.steps[0].release) {
+    const d = Number(t.steps[0].label.replace("~", ""));
+    while (start1 > 1 && t.frames[start1 - 2].dir === d) start1--;
+  }
   // An early button is shown where it was pressed, and the motion is followed to its end.
   const early = t.complete_at !== undefined && t.complete_at !== null && t.button_at < t.complete_at;
   // Moves without a button (a dash) end where the motion completed or fell apart.
@@ -510,6 +515,8 @@ function drawLane(a, opt) {
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
       rbox(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       if (d === 5) neutralIcon(mid - 4, ny - 4, 9); else if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
+      // "Then let go": a small neutral ball on the slot's lower-right corner.
+      if (s.release) neutralIcon(mid + 3, ny + 2, 7);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);
         gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);

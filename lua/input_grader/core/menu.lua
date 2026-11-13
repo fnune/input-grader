@@ -9,7 +9,7 @@ local function is_notation(s)
   return s:match("^[%d%[%]]+$") or s:match("^[%d%[%]]+%+[PK][PK]?$")
 end
 
-M.HINT = "STICK MOVE  LP PICK  LK CLOSE"
+M.HINT = { { dir = 8 }, { dir = 2 }, " MOVE  ", { btn = "LP" }, " PICK  ", { btn = "LK" }, " CLOSE" }
 M.FOOTER = "PGUP/DN HISTORY   H HIDE"
 
 --- Rows for `moves` (from the game module's :moves()): ALL MOVES, the main moves, and the other
@@ -64,7 +64,7 @@ function M.draw(canvas, rows, selected)
   local height = 16 + (last - first + 1) * M.ROW_H + M.ROW_H
   draw.rbox(canvas, x0, y0, x0 + width, y0 + height, COL.panel, COL.edge)
   canvas:text(x0 + 5, y0 + 4, "TARGET", COL.text)
-  canvas:text(x0 + width - 4 - draw.CHAR_W * #M.HINT, y0 + 4, M.HINT, COL.dim)
+  draw.inline(canvas, x0 + width - 4 - draw.parts_width(M.HINT), y0 + 4, M.HINT, COL.dim)
   canvas:text(x0 + 5, y0 + height - 10, M.FOOTER, COL.dim)
   for i = first, last do
     local m = rows[i]

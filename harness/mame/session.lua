@@ -48,7 +48,18 @@ M.P1 = {
   MK = "P1 Forward Kick",
   HK = "P1 Roundhouse Kick",
 }
-M.P2 = { LP = "P2 Jab Punch" }
+M.P2 = {
+  up = "P2 Up",
+  down = "P2 Down",
+  left = "P2 Left",
+  right = "P2 Right",
+  LP = "P2 Jab Punch",
+  MP = "P2 Strong Punch",
+  HP = "P2 Fierce Punch",
+  LK = "P2 Short Kick",
+  MK = "P2 Forward Kick",
+  HK = "P2 Roundhouse Kick",
+}
 
 local held = {}
 
@@ -59,27 +70,30 @@ function M.hold(names)
   end
 end
 
--- Raw input word (up 1, down 2, left 4, right 8, LP 0x10 ... HK 0x400) to P1 control names.
-function M.hold_raw(raw)
-  local names, bitmap =
-    {}, {
-      { 1, "up" },
-      { 2, "down" },
-      { 4, "left" },
-      { 8, "right" },
-      { 0x10, "LP" },
-      { 0x20, "MP" },
-      { 0x40, "HP" },
-      { 0x100, "LK" },
-      { 0x200, "MK" },
-      { 0x400, "HK" },
-    }
+-- Raw input word (up 1, down 2, left 4, right 8, LP 0x10 ... HK 0x400) to control names.
+local function raw_names(raw, controls, names)
+  local bitmap = {
+    { 1, "up" },
+    { 2, "down" },
+    { 4, "left" },
+    { 8, "right" },
+    { 0x10, "LP" },
+    { 0x20, "MP" },
+    { 0x40, "HP" },
+    { 0x100, "LK" },
+    { 0x200, "MK" },
+    { 0x400, "HK" },
+  }
   for _, pair in ipairs(bitmap) do
     if math.floor(raw / pair[1]) % 2 == 1 then
-      table.insert(names, M.P1[pair[2]])
+      table.insert(names, controls[pair[2]])
     end
   end
-  M.hold(names)
+  return names
+end
+
+function M.hold_raw(raw, p2_raw)
+  M.hold(raw_names(p2_raw or 0, M.P2, raw_names(raw, M.P1, {})))
 end
 
 local function apply_inputs()

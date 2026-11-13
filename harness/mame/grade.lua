@@ -78,6 +78,59 @@ local CASES = {
   { "Tatsumaki", { { 5, 20 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LK" }, { 5, 110 } }, "Tatsumaki Senpukyaku", true },
 }
 
+-- P2 attacks on frame 15 (standing MP connects on 21, crouching MK on 23); P1 taps on `tap`.
+local PARRY_CASES = {
+  { "parry in the window", 0x20, 16, 8, true },
+  { "parry too early", 0x20, 5, 8, false, "parry_early" },
+  { "parry too late", 0x20, 23, 8, false, "parry_late" },
+  { "forward against a low", 0x202, 18, 8, false, "parry_direction" },
+  { "low parry", 0x202, 18, 2, true },
+}
+
+local function parry_cases(report)
+  local failures = 0
+  app:choose({ id = "ryu:parry", name = "parry" })
+  S.hold_raw(8)
+  S.wait(70)
+  S.hold({})
+  S.wait(30)
+  manager.machine:save("parry")
+  S.wait(2)
+  for _, case in ipairs(PARRY_CASES) do
+    manager.machine:load("parry")
+    S.wait(2)
+    local before = #graded
+    for f = 1, 45 do
+      S.hold_raw(f == case[3] and case[4] or 0, (f == 15 or f == 16) and case[2] or 0)
+      coroutine.yield()
+    end
+    S.hold({})
+    local a = graded[before + 1]
+    local code = a and a.error and a.error.code or nil
+    local good = a ~= nil and a.ok == case[5] and code == case[6]
+    if not good then
+      failures = failures + 1
+    end
+    local line = a
+        and string.format(
+          "%s %s: %s ok=%s %s | %s",
+          good and "PASS" or "FAIL",
+          case[1],
+          a.move,
+          tostring(a.ok),
+          code or "",
+          a.error and a.error.text or ""
+        )
+      or string.format("FAIL %s: no attempt graded", case[1])
+    table.insert(report, line)
+    print(line)
+    if snapshots and a then
+      manager.machine.video:snapshot()
+    end
+  end
+  return failures
+end
+
 S.spawn(function()
   S.boot_to_match(0)
   local report, failures = {}, 0
@@ -126,6 +179,7 @@ S.spawn(function()
     manager.machine.video:snapshot()
     app:toggle_menu()
   end
+  failures = failures + parry_cases(report)
   table.insert(report, failures == 0 and "all cases pass" or (failures .. " case(s) failed"))
   local f = io.open(out_path, "w")
   f:write(table.concat(report, "\n") .. "\n")

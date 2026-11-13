@@ -4,7 +4,8 @@ local ram = require("input_grader.games.sfiii3.ram")
 
 local M = {}
 
-local ROUTINE_NO, PLAYER_ATTACK = 36, 4
+local PLAYER_NORMAL, PLAYER_DAMAGE, PLAYER_ATTACK = 0, 1, 4
+local PARRY_FIRST, PARRY_LAST, BLOCK_FIRST, BLOCK_LAST = 31, 35, 4, 7
 
 local RamSource = {}
 RamSource.__index = RamSource
@@ -38,11 +39,32 @@ local function rno_slot(fighter, flags, rno)
   return fallback
 end
 
+-- The frame an attack reaches the player: a parry, a block or a hit begins.
+function RamSource:watch_contact(r1, r2, was)
+  local base, other = ram.PLAYER[self.player], ram.PLAYER[3 - self.player]
+  local parried = r1 == PLAYER_NORMAL and r2 >= PARRY_FIRST and r2 <= PARRY_LAST
+  local was_parried = was and was[1] == PLAYER_NORMAL and was[2] >= PARRY_FIRST and was[2] <= PARRY_LAST
+  local struck = r1 == PLAYER_DAMAGE and not (was and was[1] == PLAYER_DAMAGE)
+  local guard_chuu = self.guard_chuu or 0
+  self.guard_chuu = self.mem.u8(base + ram.GUARD_CHUU)
+  if (parried and not was_parried) or struck then
+    self.contact = {
+      parried = parried,
+      blocked = struck and r2 >= BLOCK_FIRST and r2 <= BLOCK_LAST,
+      airborne = self.ram:airborne(),
+      opponent_guard = self.mem.u8(other + ram.ATT_GUARD),
+      jump_in = self.mem.u8(other + ram.JUMP_ATT_FLAG) ~= 0,
+      red = guard_chuu > 0 and guard_chuu < 5,
+    }
+  end
+end
+
 function RamSource:poll()
   local base = ram.PLAYER[self.player]
-  local r1, r2 = self.mem.s16(base + ROUTINE_NO + 2), self.mem.s16(base + ROUTINE_NO + 4)
+  local r1, r2 = self.mem.s16(base + ram.ROUTINE_NO + 2), self.mem.s16(base + ram.ROUTINE_NO + 4)
   local was = self.routine
   self.routine = { r1, r2 }
+  self:watch_contact(r1, r2, was)
   if not self.ram:in_match() or not self.ram:check_ran() then
     return nil
   end
@@ -57,7 +79,10 @@ function RamSource:poll()
     started = rno_slot(fighter, (self.previous_flags or state.flag), r2)
   end
   self.previous_flags = state.flag
+  local contact = self.contact
+  self.contact = nil
   return {
+    contact = contact,
     raw = raw,
     facing_right = ctx.facing_right,
     airborne = ctx.airborne,

@@ -97,7 +97,21 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `wrong_button` | The motion was complete, but the button was one the move does not take (a punch for the Tatsumaki). Without a target, only when the button came inside the window and fits no other move |
 | `cancelled` | An input that cancels the motion (exactly up, for most specials) arrived mid-motion |
 | `other_move` | A different move started (for example the super instead of the Hadoken) |
+| `parry_early`, `parry_late` | The parry tap came before the window could reach the hit, or after the hit |
+| `parry_direction` | The tap was forward against a low attack, or down against one that is only high |
+| `no_parry` | The attack connected with no tap |
 | `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |
+
+## Parries
+
+The game parries in `defense_ground` and `defense_sky` (`HITCHECK.C`): when an attack connects, the parry is taken if the slot of the tapped direction still has a positive flag. Measured in MAME (`harness/mame/parry.lua`, Ryu against Ryu's standing MP and crouching MK):
+
+- A forward tap sets slot 3's flag to 10 on the next frame, then the flag counts down by one per frame. The attack is parried if it connects while the flag is positive: from 9 frames after the tap's frame to the frame itself.
+- Down sets slot 4 the same way, for low attacks. The attack's `att.guard` bits say which it accepts: 0x02 high (standing MP: 0x3E), 0x01 low (crouching MK: 0x2D), 0x04 air.
+- Jump-ins use slot 12, which the same forward tap sets to 5: a 5-frame window.
+- Right after blocking (`guard_chuu` 1 to 4) a red parry needs the flag at least 9 (specials) or 8 (normals), from `blocking_term_tbl`: 2 or 3 frames.
+
+The grader watches the flags and P1's routine (`routine_no` 0.31 to 0.35 parried, 1.x hit or blocked), and grades each contact a few frames later so a late tap is seen. The live cases in `harness/mame/grade.lua` cover a parry in the window, too early, too late, the wrong direction and a low parry.
 
 ## What the game does that players may not expect
 

@@ -184,6 +184,27 @@ return {
     end,
   },
   {
+    "a parry card: the tap and the hit, with where the hit landed in the tap's window",
+    function()
+      local a = {
+        move = "parry",
+        ok = true,
+        parry = { need_dir = 6, tap_dir = 6, used = 4, window = 10 },
+        steps = {},
+        trace = { frames = {}, steps = {} },
+      }
+      local c = drawn(a)
+      T.truthy(c:has_text("PARRIED"), "outcome")
+      T.truthy(c:has_text("5/10"), "landed on frame 5 of 10")
+      T.truthy(c:has_text("4F BEFORE THE HIT"), "reason line")
+      a.ok, a.error = false, { code = "parry_direction" }
+      a.parry.need_dir = 2
+      c = drawn(a)
+      T.truthy(c:has_text("GOT HIT"), "outcome")
+      T.eq(c:has_text("5/10"), nil, "no timing for the wrong direction")
+    end,
+  },
+  {
     "pearls: one per attempt, the shown one lifted",
     function()
       local list = { attempt(CLEAN), attempt(SKIP), attempt(CLEAN) }

@@ -9,6 +9,7 @@ local files = {
   "test_layout",
   "test_intent",
   "test_run",
+  "test_parry",
 }
 
 local passed, failed = 0, {}

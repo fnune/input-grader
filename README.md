@@ -12,7 +12,8 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 - **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up. The input that broke the attempt is boxed in red.
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
 - **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
-- **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
+- **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted.
+- **Parry practice**: target PARRY and let the opponent attack (another player, or the training mode's recorded dummy). Each hit gets a card: the direction the attack needed, your tap, and where the hit landed in your 10-frame window, or how many frames early or late you were. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
 - **Runs inside Fightcade's training mode** as an add-on, next to its hitboxes and input display, with Fightcade's own icons.
 - **Reference tables**: [every character's motions and windows](docs/windows.md), generated from the ROM.
@@ -146,7 +147,7 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 
 - P2 support, so you can grade from either side of a netplay or training session.
 - A training journal: progress per move over days and weeks, built from the attempt log.
-- Parry practice. A parry's timing is relative to the opponent's hit, so grading one needs the incoming attack's active frames from RAM (or a recorded dummy), not just the forward tap. Until then parries, mashing and the other system slots are left out of the target list.
+- Red parry detail: the card says when a parry needed the shorter red window, but not yet whether the attack counted as a normal (3 frames) or a special (2 frames).
 - Grading timing after an action, starting with dash into throw: whether the throw came before you could act, whether LP and LK were pressed together, and range or throw invulnerability.
 - A move cheatsheet on a hotkey: the current character's specials and selected super art, drawn with the same icons as the grid, with each step's window and the optional last directions. The command tables already hold everything it needs.
 - A pinned FBNeo build under Wine in the flake, to try the script without Fightcade. FBNeo's Lua only exists in its Windows build, and its command line takes a game or a script but not both, so this would be a manual check rather than an automated one.

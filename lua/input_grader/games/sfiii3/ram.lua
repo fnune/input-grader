@@ -29,6 +29,7 @@ end
 
 M.RL_FLAG, M.RL_WAZA, M.POS_Y = 0x0A, 0x0B, 0x68
 M.PLAYER_NUMBER, M.SA_STOP_FLAG, M.DO_NOT_MOVE = 0x3C0, 0x41C, 0x455
+M.ROUTINE_NO, M.ATT_GUARD, M.JUMP_ATT_FLAG, M.GUARD_CHUU = 0x24, 0x2E1, 0x304, 0x3D3
 
 --- The facing the command check uses: rl_waza, which can differ from the sprite's rl_flag
 --- for a few frames around a cross-up.

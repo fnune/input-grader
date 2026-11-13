@@ -2,6 +2,7 @@ local bits = require("input_grader.core.bits")
 local History = require("input_grader.core.history")
 local C = require("input_grader.games.sfiii3.constants")
 local inputs = require("input_grader.games.sfiii3.inputs")
+local Parry = require("input_grader.games.sfiii3.parry")
 local Tracker = require("input_grader.games.sfiii3.tracker")
 
 local band, has = bits.band, bits.has
@@ -114,6 +115,14 @@ function Game:moves()
   table.sort(list, function(a, b)
     return a.slot < b.slot
   end)
+  table.insert(list, {
+    id = self.fighter.name .. ":parry",
+    name = "parry",
+    notation = "",
+    slot = -1,
+    buttonless = true,
+    other = true,
+  })
   return list
 end
 
@@ -168,6 +177,7 @@ function Game:rebuild(obs)
     tracked[slot] = record
   end
   self.tracker = Tracker.new(tracked)
+  self.parry = Parry.new()
   self.pending = nil
 end
 
@@ -203,6 +213,10 @@ function Game:update()
   self.tracker:update(obs.state, dead, obs.started and obs.started.slot)
 
   local graded = {}
+  local judged = self.parry:update({ flag = obs.state.flag, contact = obs.contact })
+  if judged and self.options.target == self.fighter.name .. ":parry" then
+    table.insert(graded, self:parry_attempt(judged, obs))
+  end
   local buttonless = self:buttonless_attempt(obs)
   if buttonless then
     table.insert(graded, buttonless)
@@ -505,6 +519,33 @@ end
 
 -- Each step needs a frame of its own, except one that follows a release: letting go of 6 and
 -- pressing 2 can happen on the same frame.
+function Game:parry_attempt(j, obs)
+  local tap = j.tap
+  local need = j.needed[1] or 6
+  if tap and #j.needed > 1 then
+    need = tap.dir
+  end
+  local used = tap and tap.frame <= j.frame and j.frame - tap.frame or nil
+  local window = j.window or 10
+  return {
+    game = "sfiii3",
+    character = self.fighter.name,
+    id = self.fighter.name .. ":parry",
+    move = j.airborne and "air parry" or "parry",
+    notation = "",
+    frame = j.frame,
+    side = obs.facing_right and "right" or "left",
+    ok = j.parried,
+    error = j.error,
+    steps = { { label = tostring(need) }, { label = "HIT", used = used and used + 1, window = window } },
+    total = used,
+    minimum = 0,
+    margin = used and window - 1 - used or nil,
+    parry = { need_dir = need, tap_dir = tap and tap.dir, used = used, window = window, blocked = j.blocked },
+    trace = { frames = {}, steps = {} },
+  }
+end
+
 local function fastest(record)
   local frames = 0
   for k = 2, shown_steps(record) do

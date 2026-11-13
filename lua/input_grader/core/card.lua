@@ -89,6 +89,9 @@ end
 --- "missed", "out", "clean" (every input used at most half its window) or "perfect" (the
 --- fastest possible).
 function M.kind(attempt)
+  if attempt and attempt.parry then
+    return attempt.ok and "out" or "missed"
+  end
   if attempt and refused(attempt) then
     return "refused"
   end
@@ -270,9 +273,87 @@ local function draw_runs(canvas, cx, y, runs, culprit)
   end
 end
 
+local PARRY_REASON = {
+  no_parry = function()
+    return { "NO TAP" }
+  end,
+  parry_late = function(e)
+    return { e.frames .. "F LATE" }
+  end,
+  parry_early = function(e)
+    return { e.frames .. "F EARLY" }
+  end,
+}
+
+local function parry_reason(attempt)
+  local e = attempt.error
+  if not e then
+    return { (attempt.parry.used or 0) .. "F BEFORE THE HIT" }
+  end
+  if e.code == "parry_direction" then
+    return { { dir = attempt.parry.tap_dir }, " NOT ", { dir = attempt.parry.need_dir } }
+  end
+  return (PARRY_REASON[e.code] or function()
+    return { e.code }
+  end)(e)
+end
+
+-- A parry has two columns: the tap (what the attack needed, what the player tapped) and the hit
+-- (how it ended, and where in the tap's window it landed).
+local function draw_parry(canvas, attempt, opts)
+  local x0, y0, height = opts.x0, opts.y0, M.HEIGHT
+  local pa, ok = attempt.parry, attempt.ok
+  local verdict = ok and COL.good or COL.bad
+  local col_w = draw.CHAR_W * 9
+  local x1 = x0 + M.PAD + col_w * 2 + M.GAP + M.PAD
+  local ty = y0 - M.NAME_H + 2
+  local name_x = x0 + 1
+  if opts.target then
+    canvas:text(x0 + 1, ty, "TARGET", COL.dim)
+    name_x = x0 + 1 + draw.CHAR_W * 7
+  end
+  local name = attempt.move:upper()
+  canvas:text(name_x, ty, name, COL.text)
+  draw.inline(canvas, name_x + draw.CHAR_W * #name + 6, ty, parry_reason(attempt), ok and COL.dim or COL.bad)
+
+  draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)
+  draw.rbox(canvas, x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, draw.alpha(verdict, 0x28))
+  local ny, ry, my = y0 + 11, y0 + 23, y0 + 37
+  local tap_mid = x0 + M.PAD + math.floor(col_w / 2)
+  local hit_left = x0 + M.PAD + col_w + M.GAP
+  local hit_mid = hit_left + math.floor(col_w / 2)
+  canvas:line(hit_left - M.GAP / 2, y0 + M.PAD, hit_left - M.GAP / 2, y0 + height - M.PAD, COL.divider)
+
+  local wrong_dir = attempt.error ~= nil and attempt.error.code == "parry_direction"
+  local tap_c = (wrong_dir or (attempt.error and attempt.error.code == "no_parry")) and COL.bad or COL.good
+  draw.rbox(canvas, tap_mid - 7, ny - 7, tap_mid + 7, ny + 7, draw.alpha(tap_c, 0x40), tap_c)
+  draw.icon(canvas, pa.need_dir, tap_mid - 6, ny - 6, 13)
+  if pa.tap_dir then
+    draw.icon(canvas, pa.tap_dir, tap_mid - 4, ry, 9)
+  else
+    canvas:text(tap_mid - 6, ry + 1, "---", COL.bad)
+  end
+
+  draw.rbox(canvas, hit_mid - 9, ny - 7, hit_mid + 9, ny + 7, draw.alpha(verdict, 0x40), verdict)
+  canvas:text(hit_mid - 6, ny - 3, "HIT", COL.text)
+  local outcome = ok and "PARRIED" or (pa.blocked and "BLOCKED" or "GOT HIT")
+  canvas:text(hit_mid - 2 * #outcome, ry + 1, outcome, ok and COL.good or COL.bad)
+  if attempt.error and attempt.error.code == "parry_late" then
+    draw.meter(canvas, hit_mid, my, nil, pa.window, hit_left, col_w, "LATE")
+  elseif pa.used and not wrong_dir then
+    draw.meter(canvas, hit_mid, my, pa.used + 1, pa.window, hit_left, col_w)
+  else
+    draw.meter(canvas, hit_mid, my, nil, pa.window, hit_left, col_w)
+  end
+  return { x0 = x0, x1 = x1, y0 = y0, y1 = y0 + height }
+end
+
 --- Draws the card for `attempt` with its box's top-left at (opts.x0, opts.y0). opts.target marks
 --- a targeted move; opts.max_x1 caps the right edge. Returns the box { x0, x1, y0, y1 }.
 function M.draw(canvas, attempt, opts)
+  if attempt.parry then
+    return draw_parry(canvas, attempt, opts)
+  end
   local t = attempt.trace
   local x0, y0, height = opts.x0, opts.y0, M.HEIGHT
   local ok = attempt.ok

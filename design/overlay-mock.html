@@ -20,6 +20,8 @@
 <div class="bar">
   <span>Scale</span><span id="scales"></span>
   <span>Position</span><span id="positions"></span>
+  <span>Shown pearl</span><span id="pearls"></span>
+  <span>Clean mark</span><span id="marks"></span>
   <span>Fightcade input display</span><span id="history"></span>
 <span>Show</span><span id="toggles"></span>
 </div>
@@ -557,30 +559,92 @@ function isClean(a) {
 // Recent attempts as floating pearls under the card (the last 12, oldest on the left). The outlined
 // one is shown; a new attempt, or stepping to the rightmost pearl, returns to the latest. A pearl is 5x5 with rounded corners: a black outline around its colour.
 // The one shown gets a rounded white outline.
-function pearl(x, y, c) {
-  gui.line(x + 1, y, x + 3, y, 0x000000FF);
-  gui.line(x + 1, y + 4, x + 3, y + 4, 0x000000FF);
-  gui.line(x, y + 1, x, y + 3, 0x000000FF);
-  gui.line(x + 4, y + 1, x + 4, y + 3, 0x000000FF);
-  gui.box(x + 1, y + 1, x + 3, y + 3, c, c);
+function pearl(x, y, c, size) {
+  const n = size || 5, e = n - 1;
+  gui.line(x + 1, y, x + e - 1, y, 0x000000FF);
+  gui.line(x + 1, y + e, x + e - 1, y + e, 0x000000FF);
+  gui.line(x, y + 1, x, y + e - 1, 0x000000FF);
+  gui.line(x + e, y + 1, x + e, y + e - 1, 0x000000FF);
+  gui.box(x + 1, y + 1, x + e - 1, y + e - 1, c, c);
 }
 
-function drawHistory(box, attempts, shown) {
+const fade = c => (c & 0xFFFFFF00) | 0x70;
+
+// Marks that set clean and frame-perfect attempts apart on a green pearl, reminding of the star.
+// Variants to compare in the story: "spark" (a gold plus above), "heart" (gold centre pixel, and
+// gold corners for frame-perfect), "below" (gold marks under the pearl).
+function pearlMark(variant, kind, x, y, n) {
+  const G = COL.gold;
+  if (kind !== "clean" && kind !== "perfect") return;
+  if (variant === "spark") {
+    const cx = x + Math.floor(n / 2);
+    gui.pixel(cx, y - 4, G); gui.pixel(cx - 1, y - 3, G); gui.pixel(cx, y - 3, G); gui.pixel(cx + 1, y - 3, G); gui.pixel(cx, y - 2, G);
+    if (kind === "perfect") {
+      const e = n - 1;
+      gui.line(x + 1, y, x + e - 1, y, G); gui.line(x + 1, y + e, x + e - 1, y + e, G);
+      gui.line(x, y + 1, x, y + e - 1, G); gui.line(x + e, y + 1, x + e, y + e - 1, G);
+    }
+  } else if (variant === "heart") {
+    const c = Math.floor(n / 2);
+    gui.pixel(x + c, y + c, G);
+    if (kind === "perfect") {
+      gui.pixel(x + 1, y + 1, G); gui.pixel(x + n - 2, y + 1, G); gui.pixel(x + 1, y + n - 2, G); gui.pixel(x + n - 2, y + n - 2, G);
+    }
+  } else if (variant === "below") {
+    const cx = x + Math.floor(n / 2);
+    if (kind === "clean") { gui.pixel(cx, y + n + 1, G); gui.pixel(cx - 1, y + n + 2, G); gui.pixel(cx + 1, y + n + 2, G); }
+    else { gui.pixel(cx - 2, y + n + 1, G); gui.pixel(cx + 2, y + n + 1, G); gui.pixel(cx - 1, y + n + 2, G); gui.pixel(cx + 1, y + n + 2, G); gui.pixel(cx, y + n + 1, G); }
+  }
+}
+
+function pearlKind(a) {
+  if (!a || !a.ok) return "missed";
+  if (a.total === a.minimum) return "perfect";
+  return isClean(a) ? "clean" : "out";
+}
+
+// The pearl story: every state, normal and selected, for each marking variant, on the game.
+function drawPearlStory() {
+  const kinds = ["missed", "out", "clean", "perfect"];
+  const x0 = 60, y0 = 70;
+  rbox(x0 - 8, y0 - 22, x0 + 250, y0 + 3 * 34 + 2, 0x10101890, COL.edge);
+  gui.text(x0, y0 - 18, "PEARL STORY   MISSED  OUT    CLEAN  FRAME-PERFECT", COL.text);
+  ["spark", "heart", "below"].forEach((variant, row) => {
+    const y = y0 + row * 34;
+    gui.text(x0, y + 1, variant.toUpperCase(), COL.dim);
+    kinds.forEach((kind, col) => {
+      const cx = x0 + 52 + col * 30;
+      const c = kind === "missed" ? COL.bad : COL.good;
+      pearl(cx, y, c, 5);
+      pearlMark(variant, kind, cx, y, 5);
+      pearl(cx + 10, y - 1, c, 7);
+      pearlMark(variant, kind, cx + 10, y - 1, 7);
+    });
+    gui.text(x0, y + 14, "normal, then selected (bigger)", 0x8A8A9AA0);
+  });
+}
+
+// Ways to mark the pearl shown, to compare in the mock: bigger, a caret under it, the others
+// dimmed, or bigger with the others dimmed.
+let markVariant = "spark";
+function drawHistory(box, attempts, shown, style) {
   const first = Math.max(0, Math.min(shown - 6, attempts.length - 12));
   const visible = attempts.slice(first, first + 12);
   const STEP = 9, y = box.y1 + 4;
   let x = box.x0 + 3;
   visible.forEach((a, i) => {
-    const c = !a ? COL.dim : isClean(a) ? COL.gold : a.ok ? COL.good : COL.bad;
-    if (first + i === shown) {
-      gui.line(x, y - 2, x + 4, y - 2, 0xFFFFFFFF);
-      gui.line(x, y + 6, x + 4, y + 6, 0xFFFFFFFF);
-      gui.line(x - 2, y, x - 2, y + 4, 0xFFFFFFFF);
-      gui.line(x + 6, y, x + 6, y + 4, 0xFFFFFFFF);
-      gui.pixel(x - 1, y - 1, 0xFFFFFFFF); gui.pixel(x + 5, y - 1, 0xFFFFFFFF);
-      gui.pixel(x - 1, y + 5, 0xFFFFFFFF); gui.pixel(x + 5, y + 5, 0xFFFFFFFF);
+    const kind = pearlKind(a);
+    let c = !a ? COL.dim : a.ok ? COL.good : COL.bad;
+    const isShown = first + i === shown;
+    const dim = style === "dim" || style === "bigger+dim";
+    const big = style === "bigger" || style === "bigger+dim";
+    if (dim && !isShown) c = fade(c);
+    if (big && isShown) { pearl(x - 1, y - 1, c, 7); pearlMark(markVariant, kind, x - 1, y - 1, 7); }
+    else { pearl(x, y, c, 5); pearlMark(markVariant, kind, x, y, 5); }
+    if (style === "caret" && isShown) {
+      gui.line(x + 2, y + 6, x + 2, y + 6, 0xFFFFFFFF);
+      gui.line(x + 1, y + 7, x + 3, y + 7, 0xFFFFFFFF);
     }
-    pearl(x, y, c);
     x += STEP;
   });
 }
@@ -627,15 +691,22 @@ function drawPicker(moves, selected) {
 }
 
 // ---- Page controls ----
-const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null };
+const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null, pearlStyle: "bigger", mark: "spark", story: false };
 function render() {
   const cv = document.getElementById("screen");
   cv.style.width = W * state.scale + "px"; cv.style.height = H * state.scale + "px";
   ctx.clearRect(0, 0, W, H);
   if (bg.complete) ctx.drawImage(bg, 0, 0);
+  markVariant = state.mark;
+  if (state.story) {
+    drawPearlStory();
+    const c = cv.getContext("2d"); c.clearRect(0, 0, W, H); c.drawImage(fb, 0, 0);
+    for (const el of document.querySelectorAll("[data-k]")) el.classList.toggle("on", String(state[el.dataset.k]) === el.dataset.v);
+    return;
+  }
   const sc = SCENARIOS[state.scenario];
   const box = drawLane(sc.attempt, Object.assign({}, state, { target: sc.target }));
-  if (state.browse) drawHistory(box, SCENARIOS.map(x => x.attempt), state.scenario);
+  if (state.browse) drawHistory(box, SCENARIOS.map(x => x.attempt), state.scenario, state.pearlStyle);
   if (state.picker) {
     const moves = sc.moves || [];
     const selectable = pickerRows(moves).filter(r => !r.divider);
@@ -657,8 +728,10 @@ buttons("scenarios", "scenario", SCENARIOS.map((_, i) => i), i => SCENARIOS[i].n
 buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
 buttons("positions", "position", ["bottom", "middle", "top"]);
 buttons("history", "history", ["off", "on"]);
+buttons("pearls", "pearlStyle", ["bigger", "caret", "dim", "bigger+dim"]);
+buttons("marks", "mark", ["spark", "heart", "below"]);
 const tg = document.getElementById("toggles");
-for (const k of ["browse", "picker"]) {
+for (const k of ["browse", "picker", "story"]) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";
   b.onclick = () => { state[k] = !state[k]; render(); }; tg.appendChild(b);
 }

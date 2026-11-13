@@ -11,7 +11,8 @@ local App = {}
 App.__index = App
 
 App.HISTORY = 20
-App.HELP = "M TARGET   B BENCH   H HIDE   PGUP/PGDN HISTORY"
+App.HELP = "M TARGET  B BENCH  H HIDE  PGUP/DN HISTORY"
+App.LEGEND_X, App.LEGEND_Y = 4, 49
 App.CARD_Y = 145
 App.STALE_AFTER = 30
 App.STALE_FADE = 0.4
@@ -177,14 +178,10 @@ function App:draw(canvas)
   local fit = layout.panel(self.card_y - 22, self.card_y + card.HEIGHT, self.avoid)
   local shown = self.shown or #self.attempts
   local attempt = self.attempts[shown]
-  local legend_y = self.card_y - card.NAME_H - 9
-  local legend_x = fit.x1 + 1
+  canvas:text(App.LEGEND_X, App.LEGEND_Y, App.HELP, COL.dim)
   if self.bench.running then
-    local counter = bench_panel.counter(self.bench:summary())
-    canvas:text(legend_x, legend_y, counter, COL.gold)
-    legend_x = legend_x + draw.CHAR_W * (#counter + 3)
+    canvas:text(fit.x1 + 1, self.card_y - card.NAME_H - 9, bench_panel.counter(self.bench:summary()), COL.gold)
   end
-  canvas:text(legend_x, legend_y, App.HELP, COL.dim)
   if not attempt then
     return
   end

@@ -190,15 +190,36 @@ function rbox(x1, y1, x2, y2, fill, outline) {
   }
 }
 
-// Neutral (stick at rest), in the style of Fightcade's arrows: a white ball, black outline. The
-// one icon used for neutral everywhere, at the arrows' sizes (13 in slots, 9 in played inputs).
+// Neutral (stick at rest), in the style of Fightcade's arrows: a white ball with a black outline
+// and a grey inner shadow on its lower right. Hand-drawn at the two sizes used: 9 in slots, 7 in
+// played inputs. "#" black, "W" white, "S" shadow.
+const NEUTRAL = {
+  9: [
+    "..#####..",
+    ".#WWWWW#.",
+    "#WWWWWWW#",
+    "#WWWWWWS#",
+    "#WWWWWWS#",
+    "#WWWWWSS#",
+    "#WWWWSSS#",
+    ".#SSSSS#.",
+    "..#####..",
+  ],
+  7: [
+    "..###..",
+    ".#WWW#.",
+    "#WWWWW#",
+    "#WWWWS#",
+    "#WWWSS#",
+    ".#SSS#.",
+    "..###..",
+  ],
+};
 function neutralIcon(x, y, size) {
-  const r = size / 2 - 1, c = (size - 1) / 2;
-  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
-    const d = Math.hypot(i - c, j - c);
-    if (d <= r - 1.2) gui.pixel(x + i, y + j, 0xFFFFFFFF);
-    else if (d <= r + 0.3) gui.pixel(x + i, y + j, 0x000000FF);
-  }
+  const colour = { "#": 0x000000FF, W: 0xFFFFFFFF, S: 0xA8A8B0FF };
+  NEUTRAL[size].forEach((row, j) => {
+    for (let i = 0; i < row.length; i++) if (colour[row[i]]) gui.pixel(x + i, y + j, colour[row[i]]);
+  });
 }
 
 // A 9x9 pixel star, outlined in black so it reads over the box edge.
@@ -384,7 +405,7 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
   runs.forEach((r, i) => {
     let ix = x;
     if (culprit(r)) rbox(x - 2, y - 2, x + Math.max(RUN_W(r), 9) + 1, y + 10, 0xFF5A5A60, COL.bad);
-    if (r.dir === 5) neutralIcon(ix, y, 9);
+    if (r.dir === 5) neutralIcon(ix + 1, y + 1, 7);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
     // Frames held, right after the direction it belongs to.
@@ -488,7 +509,7 @@ function drawLane(a, opt) {
       const accepted = s.at !== undefined, missed = !ok && r.step === k;
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
       rbox(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
-      if (d === 5) neutralIcon(mid - 5, ny - 5, 11); else if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
+      if (d === 5) neutralIcon(mid - 4, ny - 4, 9); else if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);
         gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);

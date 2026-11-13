@@ -195,6 +195,17 @@ return {
     end,
   },
   {
+    "pearls: clean attempts in the history keep their gold plus, dimmed",
+    function()
+      local function pixels(list)
+        local c = canvas()
+        pearls.draw(c, { x0 = 44, y1 = 197 }, list, #list)
+        return c.pixels
+      end
+      T.truthy(pixels({ attempt(CLEAN), attempt(SKIP) }) > pixels({ attempt(SKIP), attempt(SKIP) }), "plus drawn")
+    end,
+  },
+  {
     "picker rows: ALL MOVES, specials, then other moves after a divider",
     function()
       local rows = picker.rows({

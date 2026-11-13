@@ -4,7 +4,7 @@ local draw = require("input_grader.core.draw")
 local COL = draw.COL
 local M = {}
 
-M.VISIBLE, M.STEP = 12, 9
+M.VISIBLE, M.STEP, M.DIM = 12, 9, 0x70 / 0xFF
 
 local KIND_COL = { missed = COL.bad, refused = COL.dim, perfect = COL.gold }
 
@@ -26,8 +26,7 @@ function M.draw(canvas, box, attempts, shown)
       draw.lift_shadow(canvas, x, y + 5)
       draw_kind(canvas, kind, x - 1, y - 1, 7)
     else
-      local c = KIND_COL[kind] or COL.good
-      draw.pearl(canvas, x, y, draw.alpha(c, 0x70), 5)
+      draw_kind(draw.faded(canvas, M.DIM), kind, x, y, 5)
     end
     x = x + M.STEP
   end

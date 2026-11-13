@@ -423,7 +423,9 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
 
 function drawLane(a, opt) {
   const t = a.trace;
-  const y0 = opt.position === "top" ? 56 : opt.position === "middle" ? 104 : 138;
+  // Bottom: the card ends at y 197, so the pearls (3 px below it) leave the same 3 px above the
+  // game's bottom HUD, which starts at y 209.
+  const y0 = opt.position === "top" ? 56 : opt.position === "middle" ? 104 : 145;
   const height = 52, tabH = 11;
   // The card always leaves room for Fightcade's input display, shown or not, so it never moves.
   if (opt.history === "on") fightcadeInputs(a);
@@ -553,7 +555,7 @@ function isClean(a) {
 }
 
 // Recent attempts as floating pearls under the card (the last 12, oldest on the left), then how far
-// back the one shown is. A pearl is 5x5 with rounded corners: a black outline around its colour.
+// back the one shown is (LIVE, or 3 AGO). A pearl is 5x5 with rounded corners: a black outline around its colour.
 // The one shown gets a rounded white outline.
 function pearl(x, y, c) {
   gui.line(x + 1, y, x + 3, y, 0x000000FF);
@@ -582,7 +584,7 @@ function drawHistory(box, attempts, shown) {
     pearl(x, y, c);
     x += STEP;
   });
-  gui.text(x + 1, y - 1, back === 0 ? "LIVE" : `-${back}`, back === 0 ? COL.dim : COL.text);
+  gui.text(x + 1, y - 1, back === 0 ? "LIVE" : `${back} AGO`, back === 0 ? COL.dim : COL.text);
 }
 
 // The target picker (Alt+8). Specials and super arts first, then the moves without a button

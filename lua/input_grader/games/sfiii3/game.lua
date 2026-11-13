@@ -143,6 +143,17 @@ local function button_fits(record, pressed)
   return false
 end
 
+local SINGLE_BUTTONS = { C.SW_LK, C.SW_MK, C.SW_HK, C.SW_LP, C.SW_MP, C.SW_HP }
+
+local function needed_button(record)
+  for _, sw in ipairs(SINGLE_BUTTONS) do
+    if button_fits(record, sw) then
+      return inputs.buttons_text(sw)
+    end
+  end
+  return nil
+end
+
 function Game:rebuild(obs)
   self.fighter = self.commands.fighters[obs.fighter_row]
   self.fighter_row = obs.fighter_row
@@ -303,11 +314,13 @@ local function choose(self, p)
       local targeted = self.options.target == id
       local wanted = not self.options.target or targeted
       local fits = button_fits(record, p.pressed) or (p.started and p.started.slot == slot)
+      local wrong_button = targeted and not fits
       local run, done = nil, -1
-      if wanted and fits then
+      if wanted and (fits or wrong_button) then
         for _, candidate_run in ipairs(self.tracker:runs_since(slot, since)) do
           local n = evidence(self, record, candidate_run, p.frame + self.options.settle)
-          if n >= done and self:is_attempt(record, candidate_run, p, targeted) then
+          local motion_done = candidate_run.complete ~= nil or not wrong_button
+          if n >= done and motion_done and self:is_attempt(record, candidate_run, p, targeted) then
             run, done = candidate_run, n
           end
         end
@@ -320,7 +333,7 @@ local function choose(self, p)
           or (score == best_score and p.started and p.started.slot == slot)
           or (score == best_score and not (p.started and p.started.slot == best.slot) and total > #best.record.steps)
         if better then
-          best, best_score = { slot = slot, record = record, run = run, id = id }, score
+          best, best_score = { slot = slot, record = record, run = run, id = id, wrong_button = wrong_button }, score
         end
       end
     end
@@ -339,6 +352,14 @@ function Game:diagnose(p, pick)
   if p.started then
     local other = self.fighter.slots[p.started.slot]
     return { code = "other_move", text = (other and other.name or "another move") .. " came out instead" }
+  end
+  if pick.wrong_button then
+    return {
+      code = "wrong_button",
+      text = inputs.buttons_text(p.pressed)
+        .. " instead of "
+        .. (record.notation:match("%+(.+)$") or "the move's button"),
+    }
   end
   if c and c > p.frame then
     return { code = "early_button", text = "button " .. plural(c - p.frame, "frame") .. " before the motion finished" }
@@ -503,6 +524,9 @@ function Game:grade_pick(p, pick)
   end
   if run.steps[1] then
     attempt.total = p.frame - run.steps[1]
+  end
+  if pick.wrong_button then
+    attempt.button.need = needed_button(record)
   end
   if band(record.btix, C.BT_INDEX) == C.BT_NONE then
     attempt.button = nil

@@ -150,6 +150,23 @@ return {
     end,
   },
   {
+    "the targeted move with the wrong button is a miss that names the button, not silence",
+    function()
+      local a = one({ { 5, 20 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LP" }, { 5, 40 } }, { target = "ryu:30" })
+      T.eq(a.move, "Tatsumaki Senpukyaku")
+      T.eq(a.ok, false)
+      T.eq(a.error.code, "wrong_button")
+      T.eq(a.button.label, "LP")
+      T.eq(a.button.need, "LK")
+    end,
+  },
+  {
+    "without a target, the wrong button after a motion is not an attempt",
+    function()
+      T.eq(#play({ { 5, 20 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LP" }, { 5, 40 } }), 0)
+    end,
+  },
+  {
     "the super's last 6 is optional: notation minus the steps the game checks",
     function()
       local opt = Game.optional_directions(T.fighter(2).slots[20])

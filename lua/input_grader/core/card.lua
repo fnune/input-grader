@@ -34,6 +34,10 @@ local function button_icon(attempt)
   return attempt.button and attempt.button.label and attempt.button.label:match("[LMH][PK]") or nil
 end
 
+local function slot_button_icon(attempt)
+  return attempt.button and attempt.button.need or button_icon(attempt)
+end
+
 --- The step the miss is about and a few words with icons: "NO <3>", "<P> +4F LATE".
 function M.reason(attempt)
   if attempt.ok then
@@ -58,6 +62,8 @@ function M.reason(attempt)
     return { parts = { btn, " " .. n .. "F EARLY" }, button = true }
   elseif code == "cancelled" then
     return { parts = { { dir = 8 }, " CANCELLED" }, step = k }
+  elseif code == "wrong_button" then
+    return { parts = { btn, " NOT ", { btn = attempt.button.need } }, button = true }
   end
   return { parts = { SHORT[code] or code }, step = k }
 end
@@ -340,7 +346,7 @@ function M.draw(canvas, attempt, opts)
         draw.icon(canvas, d, ox - 4, ny - 4, 9)
       end
       draw.rbox(canvas, bx - 7, ny - 7, bx + 7, ny + 7, draw.alpha(c, 0x40), c)
-      local btn = button_icon(attempt)
+      local btn = slot_button_icon(attempt)
       if btn then
         draw.icon(canvas, btn, bx - 5, ny - 5, 11)
       end

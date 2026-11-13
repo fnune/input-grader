@@ -163,6 +163,16 @@ return {
     end,
   },
   {
+    "the wrong button: the slot shows the button the move needs, the reason the one pressed",
+    function()
+      local a = attempt({ { 5, 6 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LP" } }, { target = 30 })
+      local c = drawn(a, { target = true })
+      T.truthy(c:has_text(" NOT "), "reason")
+      T.contains(table.concat(c.icons, ","), "LK")
+      T.truthy(c:has_line(COL.bad), "red box")
+    end,
+  },
+  {
     "pearls: one per attempt, the shown one lifted",
     function()
       local list = { attempt(CLEAN), attempt(SKIP), attempt(CLEAN) }

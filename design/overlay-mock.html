@@ -554,8 +554,8 @@ function isClean(a) {
   return steps && button;
 }
 
-// Recent attempts as floating pearls under the card (the last 12, oldest on the left), then how far
-// back the one shown is (LIVE, or 3 AGO). A pearl is 5x5 with rounded corners: a black outline around its colour.
+// Recent attempts as floating pearls under the card (the last 12, oldest on the left). The outlined
+// one is shown; a new attempt, or stepping to the rightmost pearl, returns to the latest. A pearl is 5x5 with rounded corners: a black outline around its colour.
 // The one shown gets a rounded white outline.
 function pearl(x, y, c) {
   gui.line(x + 1, y, x + 3, y, 0x000000FF);
@@ -568,7 +568,6 @@ function pearl(x, y, c) {
 function drawHistory(box, attempts, shown) {
   const first = Math.max(0, Math.min(shown - 6, attempts.length - 12));
   const visible = attempts.slice(first, first + 12);
-  const back = attempts.length - 1 - shown;
   const STEP = 9, y = box.y1 + 4;
   let x = box.x0 + 3;
   visible.forEach((a, i) => {
@@ -584,7 +583,6 @@ function drawHistory(box, attempts, shown) {
     pearl(x, y, c);
     x += STEP;
   });
-  gui.text(x + 1, y - 1, back === 0 ? "LIVE" : `${back} AGO`, back === 0 ? COL.dim : COL.text);
 }
 
 // The target picker (Alt+8). Specials and super arts first, then the moves without a button

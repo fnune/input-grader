@@ -193,6 +193,7 @@ function rbox(x1, y1, x2, y2, fill, outline) {
 }
 
 // A 9x9 pixel star, outlined in black so it reads over the box edge.
+// "#" gold. Placed so the box border runs into the right leg, never between the legs.
 const STAR = [
   "....#....",
   "....#....",
@@ -205,14 +206,17 @@ const STAR = [
   ".#.....#.",
 ];
 function star(x, y, c) {
+  const body = (i, j) => STAR[j] && (STAR[j][i] === "#" || STAR[j][i] === "k");
   for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) {
-    if (STAR[j][i] !== "#") continue;
+    if (!body(i, j)) continue;
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      const ni = i + dx, nj = j + dy;
-      if (!(STAR[nj] && STAR[nj][ni] === "#")) gui.pixel(x + i + dx, y + j + dy, 0x000000FF);
+      if (!body(i + dx, j + dy)) gui.pixel(x + i + dx, y + j + dy, 0x000000FF);
     }
   }
-  for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) if (STAR[j][i] === "#") gui.pixel(x + i, y + j, c);
+  for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) {
+    if (STAR[j][i] === "#") gui.pixel(x + i, y + j, c);
+    else if (STAR[j][i] === "k") gui.pixel(x + i, y + j, 0x000000FF);
+  }
 }
 
 // A bevelled box outline drawn every other pixel: something optional. Each edge and corner
@@ -461,7 +465,7 @@ function drawLane(a, opt) {
     }
     cx += w + GAP;
   }
-  if (safe) star(x1 - 5, y0 - 5, COL.gold);
+  if (safe) star(x1 - 7, y0 - 4, COL.gold);
 }
 
 // ---- Page controls ----

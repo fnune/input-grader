@@ -552,28 +552,37 @@ function isClean(a) {
   return steps && button;
 }
 
-// Recent attempts in their own box under the card, 1 px apart from it: a black border, a grey tint,
-// as wide as the dots it holds (the last 12, oldest on the left) plus how far back the one shown
-// is. Each dot has a black border for contrast; the one shown is outlined white.
+// Recent attempts as floating pearls under the card (the last 12, oldest on the left), then how far
+// back the one shown is. A pearl is 5x5 with rounded corners: a black outline around its colour.
+// The one shown gets a rounded white outline.
+function pearl(x, y, c) {
+  gui.line(x + 1, y, x + 3, y, 0x000000FF);
+  gui.line(x + 1, y + 4, x + 3, y + 4, 0x000000FF);
+  gui.line(x, y + 1, x, y + 3, 0x000000FF);
+  gui.line(x + 4, y + 1, x + 4, y + 3, 0x000000FF);
+  gui.box(x + 1, y + 1, x + 3, y + 3, c, c);
+}
+
 function drawHistory(box, attempts, shown) {
   const first = Math.max(0, Math.min(shown - 6, attempts.length - 12));
   const visible = attempts.slice(first, first + 12);
   const back = attempts.length - 1 - shown;
-  const label = back === 0 ? "LIVE" : `-${back}`;
-  const DOT = 7, STEP = 9, PAD = 3;
-  const x1 = box.x0, y1 = box.y1 + 2;
-  const x2 = x1 + PAD + visible.length * STEP + 2 + 4 * label.length + PAD;
-  const y2 = y1 + PAD + DOT + PAD - 1;
-  gui.box(x1, y1, x2, y2, 0x50505AC0, 0x000000FF);
-  let x = x1 + PAD + 1;
-  const y = y1 + PAD;
+  const STEP = 9, y = box.y1 + 4;
+  let x = box.x0 + 3;
   visible.forEach((a, i) => {
     const c = !a ? COL.dim : isClean(a) ? COL.gold : a.ok ? COL.good : COL.bad;
-    gui.box(x, y, x + DOT - 1, y + DOT - 1, c, 0x000000FF);
-    if (first + i === shown) gui.box(x - 1, y - 1, x + DOT, y + DOT, 0x00000000, 0xFFFFFFFF);
+    if (first + i === shown) {
+      gui.line(x, y - 2, x + 4, y - 2, 0xFFFFFFFF);
+      gui.line(x, y + 6, x + 4, y + 6, 0xFFFFFFFF);
+      gui.line(x - 2, y, x - 2, y + 4, 0xFFFFFFFF);
+      gui.line(x + 6, y, x + 6, y + 4, 0xFFFFFFFF);
+      gui.pixel(x - 1, y - 1, 0xFFFFFFFF); gui.pixel(x + 5, y - 1, 0xFFFFFFFF);
+      gui.pixel(x - 1, y + 5, 0xFFFFFFFF); gui.pixel(x + 5, y + 5, 0xFFFFFFFF);
+    }
+    pearl(x, y, c);
     x += STEP;
   });
-  gui.text(x + 1, y, label, back === 0 ? COL.dim : COL.text);
+  gui.text(x + 1, y - 1, back === 0 ? "LIVE" : `-${back}`, back === 0 ? COL.dim : COL.text);
 }
 
 // The target picker (Alt+8). Specials and super arts first, then the moves without a button

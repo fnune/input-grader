@@ -205,7 +205,7 @@ return {
     end,
   },
   {
-    "menu rows: HIDE OVERLAY, then the targets: ALL MOVES, specials, other moves after a divider",
+    "menu rows: ALL MOVES, specials, then other moves after a divider",
     function()
       local rows = menu.rows({
         { id = "ryu:0", name = "forward dash", notation = "", buttonless = true, other = true },
@@ -213,14 +213,12 @@ return {
         { id = "ryu:29b", name = "Hadoken", notation = "236+P" },
         { id = "ryu:8", name = "punch mashing", notation = "longer window", other = true },
       })
-      T.eq(rows[1].action, "hide")
-      T.eq(rows[2].divider, true)
-      T.eq(rows[3].name, "ALL MOVES")
-      T.eq(rows[4].name, "Hadoken")
-      T.eq(rows[5].divider, true)
-      T.eq(rows[6].name, "forward dash")
-      T.eq(rows[7].notation, "")
-      T.eq(#menu.selectable(rows), 5)
+      T.eq(rows[1].name, "ALL MOVES")
+      T.eq(rows[2].name, "Hadoken")
+      T.eq(rows[3].divider, true)
+      T.eq(rows[4].name, "forward dash")
+      T.eq(rows[5].notation, "")
+      T.eq(#menu.selectable(rows), 4)
     end,
   },
   {
@@ -285,7 +283,7 @@ return {
     end,
   },
   {
-    "app: the menu's HIDE OVERLAY row hides the overlay",
+    "app: M brings a hidden overlay back, so the menu is never open unseen",
     function()
       local app = App.new({
         game = {
@@ -298,11 +296,11 @@ return {
           set_target = function() end,
         },
       })
-      app:controls({ M = true }, {})
-      app:controls({}, { up = true })
-      app:controls({}, {})
-      app:controls({}, { LP = true })
+      app:controls({ H = true }, {})
       T.eq(app.visible, false)
+      app:controls({}, {})
+      app:controls({ M = true }, {})
+      T.eq(app.visible, true)
     end,
   },
   {

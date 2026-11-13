@@ -12,9 +12,8 @@ end
 M.HINT = "STICK MOVE  LP PICK  LK CLOSE"
 M.FOOTER = "PGUP/DN HISTORY   H HIDE"
 
---- Rows for `moves` (from the game module's :moves()): the overlay's actions, then the targets:
---- ALL MOVES, the main moves, and the other moves after a divider. Duplicates are merged; only
---- real notation is kept, to be drawn as icons.
+--- Rows for `moves` (from the game module's :moves()): ALL MOVES, the main moves, and the other
+--- moves after a divider. Duplicates are merged; only real notation is kept, to be drawn as icons.
 function M.rows(moves)
   local seen, main, other = {}, {}, {}
   for _, m in ipairs(moves) do
@@ -25,11 +24,7 @@ function M.rows(moves)
       table.insert((m.buttonless or m.other) and other or main, row)
     end
   end
-  local rows = {
-    { name = "HIDE OVERLAY", notation = "", action = "hide" },
-    { divider = true, name = "TARGET" },
-    { name = "ALL MOVES", notation = "" },
-  }
+  local rows = { { name = "ALL MOVES", notation = "" } }
   for _, r in ipairs(main) do
     table.insert(rows, r)
   end
@@ -68,7 +63,7 @@ function M.draw(canvas, rows, selected)
   local x0, y0, width = M.X0, M.Y0, M.WIDTH
   local height = 16 + (last - first + 1) * M.ROW_H + M.ROW_H
   draw.rbox(canvas, x0, y0, x0 + width, y0 + height, COL.panel, COL.edge)
-  canvas:text(x0 + 5, y0 + 4, "MENU", COL.text)
+  canvas:text(x0 + 5, y0 + 4, "TARGET", COL.text)
   canvas:text(x0 + width - 4 - draw.CHAR_W * #M.HINT, y0 + 4, M.HINT, COL.dim)
   canvas:text(x0 + 5, y0 + height - 10, M.FOOTER, COL.dim)
   for i = first, last do
@@ -85,7 +80,7 @@ function M.draw(canvas, rows, selected)
       if m.notation ~= "" then
         draw.inline(canvas, x0 + 6, y, draw.notation_parts(m.notation), COL.text)
       end
-      canvas:text(m.action and x0 + 6 or x0 + 104, y, m.name:upper(), is_sel and COL.text or COL.dim)
+      canvas:text(x0 + 104, y, m.name:upper(), is_sel and COL.text or COL.dim)
     end
   end
   if last < #rows then

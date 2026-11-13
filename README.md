@@ -54,7 +54,7 @@ Plain keys, no setup in the emulator. Only `M MENU` is shown on screen; the menu
 
 | Key | Action |
 | --- | --- |
-| M | Open or close the menu: hide the overlay, or pick a target move. While it is open your character stands still: the stick moves through the list, LP picks, LK closes |
+| M | Open or close the menu to pick a target move (and show the overlay if hidden). While it is open your character stands still: the stick moves through the list, LP picks, LK closes |
 | H | Hide or show the overlay |
 | Page Up, Page Down | Step back and forward through recent attempts; a new attempt returns to the latest |
 

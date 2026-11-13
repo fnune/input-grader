@@ -119,12 +119,11 @@ end
 function App:toggle_menu()
   self.menu_open = not self.menu_open
   if self.menu_open then
+    self.visible = true
     local rows = menu.selectable(menu.rows(self.game:moves()))
     self.pick = 1
     for i, r in ipairs(rows) do
-      local is_target = self.target and r.id == self.target.id
-      local is_all = not self.target and not r.action and not r.id
-      if is_target or (is_all and self.pick == 1) then
+      if self.target and r.id == self.target.id then
         self.pick = i
       end
     end
@@ -133,10 +132,6 @@ end
 
 function App:choose(row)
   self.menu_open = false
-  if row and row.action == "hide" then
-    self.visible = false
-    return
-  end
   self.target = row and row.id and row or nil
   self.tally = { ok = 0, n = 0 }
   self.game:set_target(self.target and self.target.id or nil)

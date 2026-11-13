@@ -361,7 +361,13 @@ function columns(a) {
   // Moves without a button (a dash) end where the motion completed or fell apart.
   const end = t.button_at === undefined || t.button_at === null ? n : early ? t.complete_at : t.button_at;
   for (let f = start1; f <= Math.min(n, end); f++) {
-    const k = reach.findIndex(at => at !== undefined && at >= f);
+    // The step frame f satisfied (the last of them when one frame satisfies several, as 6 let go
+    // straight into 2), or the next step to come.
+    let k = -1;
+    for (let j = 0; j < reach.length; j++) {
+      if (reach[j] === f) k = j;
+      else if (k < 0 && reach[j] !== undefined && reach[j] > f) { k = j; break; }
+    }
     const frame = t.frames[f - 1];
     if (early && k >= 0) {
       cols[k].push(frame);
@@ -383,7 +389,7 @@ function columns(a) {
   };
   for (let k = 1; k < cols.length; k++) {
     const prevAt = reach[k - 1];
-    if (prevAt !== undefined) cols[k] = leftover(cols[k], t.frames[prevAt - 1].dir);
+    if (prevAt !== undefined && prevAt !== reach[k]) cols[k] = leftover(cols[k], t.frames[prevAt - 1].dir);
   }
   const lastAt = reach.filter(at => at !== undefined).pop();
   const trimmedButton = lastAt !== undefined ? leftover(buttonCol, t.frames[lastAt - 1].dir) : buttonCol;
@@ -532,7 +538,7 @@ function drawLane(a, opt) {
         (a.error && a.error.code === "early_button" && run.press !== "");
       if (k === 0) runs.forEach(run => { run.counted = true; });
       if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
-      else gui.text(mid - 6, ry + 1, "---", COL.bad);
+      else if (reach[k] === undefined) gui.text(mid - 6, ry + 1, "---", COL.bad);
       if (k === 0) {
         // The first input has no timing: nothing comes before it.
       } else if (missed && a.error.code === "cancelled") meter(mid, my, null, s.window, cx, w, "CANCELLED");

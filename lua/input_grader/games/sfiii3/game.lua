@@ -101,16 +101,15 @@ function Game:moves()
   end
   for slot, record in pairs(self.fighter.slots) do
     if self.flags and self.flags[slot] ~= -1 and record.steps[1][1] ~= CK.NONE then
-      table.insert(
-        list,
-        {
-          id = self.fighter.name .. ":" .. slot,
-          name = record.name,
-          notation = record.notation,
-          slot = slot,
-          buttonless = band(record.btix, C.BT_INDEX) == C.BT_NONE,
-        }
-      )
+      table.insert(list, {
+        id = self.fighter.name .. ":" .. slot,
+        name = record.name,
+        notation = record.notation,
+        slot = slot,
+        buttonless = band(record.btix, C.BT_INDEX) == C.BT_NONE,
+        -- System moves (dashes, high jump, parries, mashing) live below the super art slots.
+        other = slot < C.SA_GROUND,
+      })
     end
   end
   table.sort(list, function(a, b)
@@ -242,14 +241,6 @@ local function shown_steps(record)
   local n = #record.steps
   while n > 1 and record.steps[n][1] == CK.LEVER_REPEAT do
     n = n - 1
-  end
-  return n
-end
-
-local function count(t)
-  local n = 0
-  for _ in pairs(t) do
-    n = n + 1
   end
   return n
 end

@@ -1,32 +1,57 @@
--- Composes a game module, the bench, the CSV log and the overlay. Game-agnostic: the game
--- module only has to provide :update() -> attempts, :moves() and :set_target(id).
+-- The overlay app: keeps the graded attempts, which one is shown, the target picker, the bench
+-- and visibility, and draws the card, pearls, picker or bench result. Game-agnostic: the game
+-- module provides :update() -> attempts, :moves() and :set_target(id).
+--
+-- Controls are plain keys read every frame (no setup in the emulator), plus the stick and buttons
+-- inside the picker:
+--   M          open or close the target picker (stick up/down to move, LP to pick, LK to close)
+--   B          start a bench session, or stop it and show the result
+--   H          hide or show the overlay
+--   Page Up/Down  step through recent attempts; a new attempt returns to the latest
 
+local bench_panel = require("input_grader.core.bench_panel")
+local card = require("input_grader.core.card")
 local csv = require("input_grader.core.csv")
-local Overlay = require("input_grader.core.overlay")
+local draw = require("input_grader.core.draw")
+local layout = require("input_grader.core.layout")
+local pearls = require("input_grader.core.pearls")
+local picker = require("input_grader.core.picker")
 
+local COL = draw.COL
 local App = {}
 App.__index = App
 
-App.HELP = "Alt+7 bench start/stop  Alt+8 target move  Alt+9 hide"
+App.HISTORY = 20
+App.HELP = "M TARGET   B BENCH   H HIDE   PGUP/PGDN HISTORY"
+-- The card's box sits so the pearls under it leave the same 3 px above the game's bottom HUD.
+App.CARD_Y = 145
 
 --- @param deps table { game, bench, clock = fn() -> seconds, timestamp = fn() -> string,
----   log = fn(line)|nil, overlay = Overlay|nil }
+---   log = fn(line)|nil, avoid = rectangles to keep clear (the input display), y = card top }
 function App.new(deps)
   local self = setmetatable({}, App)
   self.game, self.bench, self.clock, self.log = deps.game, deps.bench, deps.clock, deps.log
   self.timestamp = deps.timestamp or function()
     return ""
   end
-  self.overlay = deps.overlay or Overlay.new()
-  self.visible, self.show_bench = true, false
-  self.started_at = self.clock()
-  self.target_index = 0
+  self.avoid = deps.avoid or {}
+  self.card_y = deps.y or App.CARD_Y
+  self.attempts, self.shown = {}, nil
+  self.visible = true
+  self.picker_open, self.pick = false, 1
+  self.target = nil
+  self.prev_keys, self.prev_pad = {}, {}
   return self
 end
 
 function App:frame()
   for _, attempt in ipairs(self.game:update()) do
-    self.last = attempt
+    table.insert(self.attempts, attempt)
+    if #self.attempts > App.HISTORY then
+      table.remove(self.attempts, 1)
+    end
+    self.shown = nil
+    self.bench_result = nil
     self.bench:record(attempt)
     if self.log then
       self.log(csv.row(self.timestamp(), attempt))
@@ -34,38 +59,117 @@ function App:frame()
   end
 end
 
-function App:toggle_bench()
-  if self.bench.running then
-    self.bench:stop()
-  else
-    self.bench:start(self.target and self.target.id or nil)
-  end
-  self.show_bench = true
+--- Whether the player's controls should be kept from the game this frame (the picker is open).
+function App:blocks_input()
+  return self.picker_open
 end
 
---- Cycle through: all moves, then each move the current character can be graded on.
-function App:cycle_target()
-  local moves = self.game:moves()
-  self.target_index = (self.target_index + 1) % (#moves + 1)
-  self.target = moves[self.target_index]
+local function pressed(now, before, name)
+  return now[name] and not before[name]
+end
+
+--- Handles this frame's keyboard keys and pad (the player's real controls, read before any
+--- blocking): tables of name -> true. Pad names: up, down, left, right, LP .. HK.
+function App:controls(keys, pad)
+  local k, p = keys or {}, pad or {}
+  if pressed(k, self.prev_keys, "M") then
+    self:toggle_picker()
+  elseif self.picker_open then
+    local rows = picker.selectable(picker.rows(self.game:moves()))
+    if pressed(p, self.prev_pad, "down") then
+      self.pick = self.pick % #rows + 1
+    elseif pressed(p, self.prev_pad, "up") then
+      self.pick = (self.pick - 2) % #rows + 1
+    elseif pressed(p, self.prev_pad, "LP") then
+      self:choose(rows[self.pick])
+    elseif pressed(p, self.prev_pad, "LK") then
+      self.picker_open = false
+    end
+  end
+  if pressed(k, self.prev_keys, "B") then
+    self:toggle_bench()
+  end
+  if pressed(k, self.prev_keys, "H") then
+    self:toggle_visible()
+  end
+  if pressed(k, self.prev_keys, "pageup") then
+    self:browse(-1)
+  elseif pressed(k, self.prev_keys, "pagedown") then
+    self:browse(1)
+  end
+  self.prev_keys, self.prev_pad = k, p
+end
+
+function App:toggle_picker()
+  self.picker_open = not self.picker_open
+  if self.picker_open then
+    self.pick = 1
+    local rows = picker.selectable(picker.rows(self.game:moves()))
+    for i, r in ipairs(rows) do
+      if self.target and r.id == self.target.id then
+        self.pick = i
+      end
+    end
+  end
+end
+
+function App:choose(row)
+  self.target = row and row.id and row or nil
   self.game:set_target(self.target and self.target.id or nil)
+  self.picker_open = false
+end
+
+function App:toggle_bench()
+  if self.bench.running then
+    self.bench_result = self.bench:stop()
+  else
+    self.bench_result = nil
+    self.bench:start(self.target and self.target.id or nil)
+  end
 end
 
 function App:toggle_visible()
   self.visible = not self.visible
 end
 
+function App:browse(step)
+  if #self.attempts == 0 then
+    return
+  end
+  local at = (self.shown or #self.attempts) + step
+  at = math.max(1, math.min(#self.attempts, at))
+  self.shown = at < #self.attempts and at or nil
+end
+
 function App:draw(canvas)
   if not self.visible then
     return
   end
-  local now = self.clock()
-  self.overlay:draw(canvas, {
-    attempt = self.last,
-    bench = self.show_bench and self.bench:summary() or nil,
-    target_name = self.target and (self.target.name .. " " .. self.target.notation) or nil,
-    help = (now - self.started_at < 10) and App.HELP or nil,
+  if self.picker_open then
+    picker.draw(canvas, picker.rows(self.game:moves()), self.pick)
+    return
+  end
+  if self.bench_result then
+    bench_panel.draw(canvas, self.bench_result)
+    return
+  end
+  local fit = layout.panel(self.card_y - 22, self.card_y + card.HEIGHT, self.avoid)
+  local shown = self.shown or #self.attempts
+  local attempt = self.attempts[shown]
+  if not attempt then
+    canvas:text(fit.x1 + 1, self.card_y + 30, App.HELP, COL.dim)
+    return
+  end
+  local box = card.draw(canvas, attempt, {
+    x0 = fit.x1,
+    y0 = self.card_y,
+    max_x1 = fit.x2,
+    target = self.target ~= nil and attempt.id == self.target.id,
   })
+  pearls.draw(canvas, box, self.attempts, shown)
+  if self.bench.running then
+    canvas:text(fit.x1 + 1, self.card_y - card.NAME_H - 9, bench_panel.counter(self.bench:summary()), COL.gold)
+  end
 end
 
 return App

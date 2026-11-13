@@ -6,7 +6,7 @@ local files = {
   "test_inputs",
   "test_grader",
   "test_bench",
-  "test_overlay",
+  "test_card",
   "test_launcher",
   "test_layout",
   "test_intent",

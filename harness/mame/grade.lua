@@ -11,6 +11,7 @@ local inputs = require("input_grader.games.sfiii3.inputs")
 local platform = require("input_grader.platform.mame").new(manager, emu)
 local sfiii3 = require("input_grader.games.sfiii3")
 local run = require("input_grader.core.run")
+local App_HISTORY = require("input_grader.core.app").HISTORY
 
 local snapshots = os.getenv("GRADE_SNAPSHOTS") == "1"
 local out_path = os.getenv("GRADE_OUT") or "build/grade-report.txt"
@@ -19,13 +20,28 @@ local app = sfiii3.build(platform, {})
 local graded = {}
 local original_frame = app.frame
 function app:frame()
-  local before = self.last
+  local before = #self.attempts
   original_frame(self)
-  if self.last ~= before then
-    table.insert(graded, self.last)
+  if
+    #self.attempts ~= before or (#self.attempts == App_HISTORY and self.attempts[#self.attempts] ~= graded[#graded])
+  then
+    table.insert(graded, self.attempts[#self.attempts])
   end
 end
 run.attach(platform, app)
+
+-- Steps as text for the report: "2  3 2/10  6 2/10  LP 0/10".
+local function steps_line(a)
+  local parts = {}
+  for _, st in ipairs(a.steps or {}) do
+    table.insert(parts, st.used and st.window and (st.label .. " " .. st.used .. "/" .. st.window) or st.label)
+  end
+  local b = a.button
+  if b and b.label then
+    table.insert(parts, b.after and b.window and (b.label .. " " .. b.after .. "/" .. b.window) or b.label)
+  end
+  return table.concat(parts, "  ")
+end
 
 -- name, script, expected move, expected ok, expected error code
 local CASES = {
@@ -100,7 +116,7 @@ S.spawn(function()
         a.move,
         tostring(a.ok),
         code or "",
-        require("input_grader.core.overlay").steps_line(a),
+        steps_line(a),
         a.error and a.error.text or ""
       )
     end
@@ -116,7 +132,6 @@ S.spawn(function()
     local _ = i
   end
   app:toggle_bench()
-  app.last = nil
   S.wait(4)
   if snapshots then
     manager.machine.video:snapshot()

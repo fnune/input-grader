@@ -47,6 +47,9 @@ end
 check("lua", function()
   return _VERSION .. ", bit " .. tostring(type(bit) == "table") .. ", gd " .. tostring(gd ~= nil)
 end)
+check("package paths", function()
+  return "cpath " .. tostring(package.cpath)
+end)
 check("rom", function()
   local name = emu.romname()
   return name .. (name == "sfiii3nr1" and "" or " (expected sfiii3nr1)")
@@ -133,8 +136,17 @@ local function bevel_box(x1, y1, x2, y2, fill, outline)
   gui.line(x2 - 3, y2, x2, y2 - 3, outline)
 end
 
-local NEUTRAL = { "..#####..", ".#WWWWW#.", "#WWWWWWW#", "#WWWWWWS#", "#WWWWWWS#", "#WWWWWSS#", "#WWWWSSS#",
-  ".#SSSSS#.", "..#####.." }
+local NEUTRAL = {
+  "..#####..",
+  ".#WWWWW#.",
+  "#WWWWWWW#",
+  "#WWWWWWS#",
+  "#WWWWWWS#",
+  "#WWWWWSS#",
+  "#WWWWSSS#",
+  ".#SSSSS#.",
+  "..#####..",
+}
 local function neutral(x, y)
   local colour = { ["#"] = 0x000000FF, W = 0xFFFFFFFF, S = 0xA8A8B0FF }
   for j, row in ipairs(NEUTRAL) do

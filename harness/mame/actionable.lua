@@ -72,11 +72,15 @@ S.spawn(function()
   manager.machine:save("before")
   S.wait(2)
 
-  local report = { string.format("action %s, press %s (frame 1 = the frame after the action's last input)", action, press) }
+  local report =
+    { string.format("action %s, press %s (frame 1 = the frame after the action's last input)", action, press) }
   local base = play(nil, 60)
   table.insert(report, "frame  routine_no  cg_type cg_ctr permited_koa   (no press)")
   for f, st in ipairs(base) do
-    table.insert(report, string.format("%5d  %-10s  %7d %6d       0x%04X", f, key(st), st.cg_type, st.cg_ctr, st.permited))
+    table.insert(
+      report,
+      string.format("%5d  %-10s  %7d %6d       0x%04X", f, key(st), st.cg_type, st.cg_ctr, st.permited)
+    )
   end
 
   table.insert(report, "")
@@ -88,7 +92,17 @@ S.spawn(function()
     table.insert(report, string.format("press at %d, frame by frame:", at))
     for f = math.max(1, at - 2), at + 3 do
       local st = log[f]
-      table.insert(report, string.format("  %3d  sw_new 0x%03X  %-10s cg_type %3d cg_ctr %3d", f, st.sw_new, key(st), st.cg_type, st.cg_ctr))
+      table.insert(
+        report,
+        string.format(
+          "  %3d  sw_new 0x%03X  %-10s cg_type %3d cg_ctr %3d",
+          f,
+          st.sw_new,
+          key(st),
+          st.cg_type,
+          st.cg_ctr
+        )
+      )
     end
   end
   trace(12)
@@ -101,8 +115,16 @@ S.spawn(function()
     local after = log[at + 3] or log[#log]
     local reference = base[at + 3] or base[#base]
     local started = key(after) ~= key(reference)
-    table.insert(report, string.format("%8d  %s  (%s vs %s without the press)", at, started and "ACCEPTED" or "dropped",
-      key(after), key(reference)))
+    table.insert(
+      report,
+      string.format(
+        "%8d  %s  (%s vs %s without the press)",
+        at,
+        started and "ACCEPTED" or "dropped",
+        key(after),
+        key(reference)
+      )
+    )
   end
 
   local f = io.open(out_path, "w")

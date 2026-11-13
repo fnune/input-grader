@@ -144,12 +144,6 @@ function arrow(cx, cy, d, r, c) {
   }
 }
 
-function badge(x, y, ok) {
-  const c = ok ? COL.good : COL.bad;
-  gui.box(x, y, x + 15, y + 15, (c & 0xFFFFFF00) | 0x50, c);
-  if (ok) { gui.line(x + 3, y + 8, x + 6, y + 11, c); gui.line(x + 6, y + 11, x + 12, y + 4, c); gui.line(x + 3, y + 9, x + 6, y + 12, c); gui.line(x + 6, y + 12, x + 12, y + 5, c); }
-  else { gui.line(x + 4, y + 4, x + 11, y + 11, c); gui.line(x + 11, y + 4, x + 4, y + 11, c); gui.line(x + 5, y + 4, x + 12, y + 11, c); gui.line(x + 12, y + 4, x + 5, y + 11, c); }
-}
 
 const SHORT = { skipped_step: "SKIPPED", too_slow: "TOO SLOW", early_button: "EARLY", late_button: "LATE",
   cancelled: "CANCELLED", missing_step: "INCOMPLETE", other_move: "OTHER MOVE", not_allowed: "REFUSED" };
@@ -191,6 +185,10 @@ function meter(x, y, used, window) {
 }
 
 // Draws a run of text and icons on one line, returning the x after it. Icons are 9 px.
+function partsWidth(parts) {
+  return parts.reduce((w, p) => w + (typeof p === "string" ? 4 * p.length : 10), 0);
+}
+
 function inline(x, y, parts, color) {
   for (const part of parts) {
     if (typeof part === "string") { gui.text(x, y, part, color); x += 4 * part.length; }
@@ -266,7 +264,8 @@ function runsOf(frames) {
   return runs;
 }
 
-const RUN_W = r => (r.dir ? 10 : 0) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
+const COUNT_W = r => (r.dir && r.n > 1 ? 4 * String(r.n).length + 1 : 0);
+const RUN_W = r => (r.dir ? 10 : 0) + COUNT_W(r) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
 
 function drawRuns(cx, y, runs, color, culprit = () => false) {
   const widths = runs.map(r => Math.max(RUN_W(r), 9));
@@ -278,8 +277,9 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
     if (r.dir === 5) gui.box(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
+    // Frames held, right after the direction it belongs to.
+    if (COUNT_W(r)) { gui.text(ix, y + 2, String(r.n), color); ix += COUNT_W(r); }
     for (const b of (r.press.match(/[LMH][PK]/g) || [])) { gui.image(ix, y, b, 9, 9); ix += 10; }
-    if (r.dir && r.n > 1) gui.text(x + Math.floor(widths[i] / 2) - 2 * String(r.n).length, y + 10, String(r.n), color);
     x += widths[i] + 3;
   });
   return total;
@@ -287,24 +287,17 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
 
 function drawLane(a, opt) {
   const t = a.trace;
-  const y0 = opt.position === "top" ? 44 : opt.position === "middle" ? 96 : 142;
-  const height = 60;
+  const y0 = opt.position === "top" ? 56 : opt.position === "middle" ? 104 : 152;
+  const height = 52, tabH = 11;
   const avoid = opt.history === "on" ? [fightcadeInputs(a)] : [];
-  const fit = panelFit(y0, y0 + height, avoid), compact = fit.compact;
-  const x0 = fit.x1, x1 = fit.x2;
-  gui.box(x0, y0, x1, y0 + height, COL.panel, COL.edge);
-
-  // Left: verdict, move name, reason. The motion itself is only in the grid.
+  const fit = panelFit(y0 - tabH, y0 + height, avoid);
+  const x0 = fit.x1;
   const ok = a.ok;
   const r = reason(a);
-  badge(x0 + 4, y0 + 4, ok);
-  if (!compact) gui.text(x0 + 24, y0 + 5, a.move.toUpperCase(), COL.text);
-  inline(compact ? x0 + 4 : x0 + 24, compact ? y0 + 24 : y0 + 15, r.parts, ok ? COL.dim : COL.warn);
+  const verdict = ok ? COL.good : COL.bad;
 
-  // Right: one column per step plus the button. Row 1 what was needed, row 2 what you did in
-  // that column's time, row 3 the timing meter.
   const { reach, cols, buttonCol } = columns(a);
-  const gx = x0 + (compact ? 4 : 104);
+  const gx = x0 + 4;
   const colW = k => {
     const runs = k < t.steps.length ? runsOf(cols[k]) : runsOf(buttonCol);
     const win = k < t.steps.length ? (t.steps[k].window || 0) : t.button_window;
@@ -312,7 +305,24 @@ function drawLane(a, opt) {
     const runsW = runs.reduce((s, r) => s + Math.max(RUN_W(r), 9) + 3, 0);
     return Math.max(30, win * 2 + 8, runsW + 6) + extra;
   };
-  const ny = y0 + 12, ry = y0 + 24, my = y0 + 45;
+  let gridW = 0;
+  for (let k = 0; k <= t.steps.length; k++) gridW += colW(k);
+  const x1 = Math.min(fit.x2, x0 + 4 + gridW + 4);
+
+  // The tab: move name and the one-line reason, untinted, on top of the box.
+  const name = a.move.toUpperCase();
+  const tabW = 4 * name.length + 8 + 6 + partsWidth(r.parts);
+  gui.box(x0, y0 - tabH, x0 + tabW, y0, COL.panel, verdict);
+  gui.text(x0 + 4, y0 - tabH + 3, name, COL.text);
+  inline(x0 + 4 + 4 * name.length + 6, y0 - tabH + 3, r.parts, ok ? COL.dim : COL.warn);
+
+  // The box, tinted with the verdict.
+  gui.box(x0, y0, x1, y0 + height, COL.panel, verdict);
+  gui.box(x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, (verdict & 0xFFFFFF00) | 0x28, (verdict & 0xFFFFFF00) | 0x28);
+
+  // Right: one column per step plus the button. Row 1 what was needed, row 2 what you did in
+  // that column's time, row 3 the timing meter.
+  const ny = y0 + 11, ry = y0 + 23, my = y0 + 37;
   let cx = gx;
   for (let k = 0; k <= t.steps.length; k++) {
     const w = colW(k), mid = cx + Math.floor(w / 2);

@@ -570,8 +570,7 @@ function pearl(x, y, c, size) {
 const fade = c => (c & 0xFFFFFF00) | 0x70;
 
 // Clean and frame-perfect pearls stay green and add the star's gold: a gold plus with a black
-// outline on the pearl's top-right corner. Frame-perfect pearls are also 1 px larger, with a gold
-// ring between the black outline and the green.
+// outline on the pearl's top-right corner. Frame-perfect pearls are all gold.
 function goldPlus(cx, cy) {
   const cells = [[0, -1], [-1, 0], [0, 0], [1, 0], [0, 1]];
   const isPlus = (dx, dy) => cells.some(([a, b]) => a === dx && b === dy);
@@ -585,13 +584,10 @@ function goldPlus(cx, cy) {
 // Draws one pearl of a kind at (x, y), size n (5 normal, 7 selected).
 function drawPearl(kind, x, y, n) {
   const c = kind === "missed" ? COL.bad : COL.good;
+  // Frame-perfect is rare enough to be all gold, at the normal size, with the same plus.
   if (kind === "perfect") {
-    const m = n + 1, e = m - 1;
-    gui.line(x + 1, y, x + e - 1, y, 0x000000FF); gui.line(x + 1, y + e, x + e - 1, y + e, 0x000000FF);
-    gui.line(x, y + 1, x, y + e - 1, 0x000000FF); gui.line(x + e, y + 1, x + e, y + e - 1, 0x000000FF);
-    gui.box(x + 1, y + 1, x + e - 1, y + e - 1, COL.gold, COL.gold);
-    gui.box(x + 2, y + 2, x + e - 2, y + e - 2, c, c);
-    goldPlus(x + e, y);
+    pearl(x, y, COL.gold, n);
+    goldPlus(x + n - 1, y);
     return;
   }
   pearl(x, y, c, n);

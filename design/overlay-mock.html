@@ -374,7 +374,7 @@ function drawLane(a, opt) {
   const safe = ok && t.steps.every((st, k) => !st.window || k === 0 || st.at === undefined || t.steps[k - 1].at === undefined ||
     safeUse(st.at - t.steps[k - 1].at, st.window)) &&
     (t.complete_at === undefined || t.complete_at === null || safeUse(t.button_at - t.complete_at, t.button_window));
-  const verdict = ok ? COL.good : COL.bad;
+  const verdict = perfect ? COL.gold : ok ? COL.good : COL.bad;
 
   const { reach, cols, buttonCol } = columns(a);
   const gx = x0 + 5;

@@ -370,7 +370,7 @@ function drawLane(a, opt) {
   // Frame-perfect: every direction 1 frame after the last and the button on the frame the
   // motion completes, so the total is the fastest possible.
   const perfect = ok && a.total === a.minimum;
-  // Safe: every timed input used at most half its window. Earns the star.
+  // Clean: every timed input used at most half its window. Earns the star.
   const safe = ok && t.steps.every((st, k) => !st.window || k === 0 || st.at === undefined || t.steps[k - 1].at === undefined ||
     safeUse(st.at - t.steps[k - 1].at, st.window)) &&
     (t.complete_at === undefined || t.complete_at === null || safeUse(t.button_at - t.complete_at, t.button_window));
@@ -400,7 +400,7 @@ function drawLane(a, opt) {
   // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
   gui.text(x0 + 1, y0 - tabH + 2, name, COL.text);
-  const tail = safe ? [perfect ? "SAFE, FRAME PERFECT" : "SAFE"] : r.parts;
+  const tail = safe ? [perfect ? "FRAME PERFECT" : "CLEAN"] : r.parts;
   const tx = inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.warn);
   if (safe && !perfect) inline(tx + 6, y0 - tabH + 2, r.parts, COL.dim);
 

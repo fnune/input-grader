@@ -215,25 +215,43 @@ function star(x, y, c) {
   for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) if (STAR[j][i] === "#") gui.pixel(x + i, y + j, c);
 }
 
-// A box outline drawn every other pixel: something optional.
+// A bevelled box outline drawn every other pixel: something optional. Each edge and corner
+// diagonal is stepped separately, so the dashes follow the bevel.
 function dashed(x1, y1, x2, y2, c) {
-  for (let x = x1; x <= x2; x += 2) { gui.pixel(x, y1, c); gui.pixel(x, y2, c); }
-  for (let y = y1; y <= y2; y += 2) { gui.pixel(x1, y, c); gui.pixel(x2, y, c); }
+  const r = Math.max(0, Math.min(RADIUS, Math.floor((x2 - x1) / 2), Math.floor((y2 - y1) / 2)));
+  const segment = (ax, ay, bx, by) => {
+    const n = Math.max(Math.abs(bx - ax), Math.abs(by - ay));
+    for (let i = 0; i <= n; i += 2) gui.pixel(ax + Math.round((bx - ax) * i / n), ay + Math.round((by - ay) * i / n), c);
+  };
+  segment(x1 + r, y1, x2 - r, y1);
+  segment(x2, y1 + r, x2, y2 - r);
+  segment(x2 - r, y2, x1 + r, y2);
+  segment(x1, y2 - r, x1, y1 + r);
+  if (r > 1) {
+    segment(x2 - r + 1, y1 + 1, x2 - 1, y1 + r - 1);
+    segment(x2 - 1, y2 - r + 1, x2 - r + 1, y2 - 1);
+    segment(x1 + r - 1, y2 - 1, x1 + 1, y2 - r + 1);
+    segment(x1 + 1, y1 + r - 1, x1 + r - 1, y1 + 1);
+  }
 }
 
-// "used/allowed" over a bar spanning the column (left .. left + width). The bar covers the window,
-// or window plus overrun when late, with a notch where the window ends. Fill: green with room to
-// spare, yellow in the last 2 frames, red past the end.
+// An input is safe when it used at most half its window (5 of 10, 2 of 5).
+const safeUse = (used, window) => used <= Math.floor(window / 2);
+
+// "used/allowed" over a square bar spanning the column (left .. left + width). The bar covers the
+// window, or window plus overrun when late, with a notch where the window ends and a tick at its
+// half. Fill: green while safe, yellow past half the window, red past the end.
 function meter(x, y, used, window, left, width) {
   const label = `${used}/${window}`;
-  const c = used > window ? COL.bad : window - used <= 2 ? COL.warn : COL.good;
+  const c = used > window ? COL.bad : safeUse(used, window) ? COL.good : COL.warn;
   gui.text(x - label.length * 2, y, label, c);
   const span = Math.max(window, used), right = left + width - 1;
   const at = f => left + Math.round((f / span) * (width - 1));
-  rbox(left, y + 9, right, y + 11, COL.cell, COL.edge);
-  if (used > 0) rbox(left, y + 9, at(Math.min(used, window)), y + 11, c, c);
+  gui.box(left, y + 9, right, y + 11, COL.cell, COL.edge);
+  if (used > 0) gui.box(left, y + 9, at(Math.min(used, window)), y + 11, c, c);
+  gui.line(at(window / 2), y + 8, at(window / 2), y + 12, 0xFFFFFF60);
   if (used > window) {
-    rbox(at(window) + 2, y + 9, at(used), y + 11, 0xA03A3AFF, 0xA03A3AFF);
+    gui.box(at(window) + 2, y + 9, at(used), y + 11, 0xA03A3AFF, 0xA03A3AFF);
     gui.line(at(window) + 1, y + 7, at(window) + 1, y + 13, COL.text);
   }
 }
@@ -352,7 +370,11 @@ function drawLane(a, opt) {
   // Frame-perfect: every direction 1 frame after the last and the button on the frame the
   // motion completes, so the total is the fastest possible.
   const perfect = ok && a.total === a.minimum;
-  const verdict = perfect ? COL.gold : ok ? COL.good : COL.bad;
+  // Safe: every timed input used at most half its window. Earns the star.
+  const safe = ok && t.steps.every((st, k) => !st.window || k === 0 || st.at === undefined || t.steps[k - 1].at === undefined ||
+    safeUse(st.at - t.steps[k - 1].at, st.window)) &&
+    (t.complete_at === undefined || t.complete_at === null || safeUse(t.button_at - t.complete_at, t.button_window));
+  const verdict = ok ? COL.good : COL.bad;
 
   const { reach, cols, buttonCol } = columns(a);
   const gx = x0 + 5;
@@ -378,7 +400,9 @@ function drawLane(a, opt) {
   // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
   gui.text(x0 + 1, y0 - tabH + 2, name, COL.text);
-  inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, perfect ? ["FRAME PERFECT"] : r.parts, perfect ? COL.gold : ok ? COL.dim : COL.warn);
+  const tail = safe ? [perfect ? "SAFE, FRAME PERFECT" : "SAFE"] : r.parts;
+  const tx = inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.warn);
+  if (safe && !perfect) inline(tx + 6, y0 - tabH + 2, r.parts, COL.dim);
 
   // The box, tinted with the verdict.
   rbox(x0, y0, x1, y0 + height, COL.panel, verdict);
@@ -437,7 +461,7 @@ function drawLane(a, opt) {
     }
     cx += w + GAP;
   }
-  if (perfect) star(x1 - 5, y0 - 5, COL.gold);
+  if (safe) star(x1 - 5, y0 - 5, COL.gold);
 }
 
 // ---- Page controls ----

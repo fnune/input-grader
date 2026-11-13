@@ -10,7 +10,7 @@ App.__index = App
 App.HELP = "Alt+7 bench start/stop  Alt+8 target move  Alt+9 hide"
 
 --- @param deps table { game, bench, clock = fn() -> seconds, timestamp = fn() -> string,
----   log = fn(line)|nil, overlay = Overlay|nil, avoid = fn() -> rectangles|nil }
+---   log = fn(line)|nil, overlay = Overlay|nil }
 function App.new(deps)
   local self = setmetatable({}, App)
   self.game, self.bench, self.clock, self.log = deps.game, deps.bench, deps.clock, deps.log
@@ -18,9 +18,6 @@ function App.new(deps)
     return ""
   end
   self.overlay = deps.overlay or Overlay.new()
-  self.avoid = deps.avoid or function()
-    return {}
-  end
   self.visible, self.show_bench = true, false
   self.started_at = self.clock()
   self.target_index = 0
@@ -68,7 +65,6 @@ function App:draw(canvas)
     bench = self.show_bench and self.bench:summary() or nil,
     target_name = self.target and (self.target.name .. " " .. self.target.notation) or nil,
     help = (now - self.started_at < 10) and App.HELP or nil,
-    avoid = self.avoid(),
   })
 end
 

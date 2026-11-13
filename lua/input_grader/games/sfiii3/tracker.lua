@@ -93,6 +93,17 @@ function Tracker:update(state, dead, started)
   self.prev = state
 end
 
+--- Every kept run of a slot that started at or after `since` (check frame), oldest first.
+function Tracker:runs_since(slot, since)
+  local out = {}
+  for _, run in ipairs(self.runs[slot] or {}) do
+    if run.start >= since then
+      table.insert(out, run)
+    end
+  end
+  return out
+end
+
 --- The most advanced run of a slot that started at or after `since` (check frame).
 function Tracker:best_run(slot, since)
   local best

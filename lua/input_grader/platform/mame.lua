@@ -8,7 +8,7 @@ local COLORS = {
   dim = 0xFFB0B0B0,
   good = 0xFF50E070,
   bad = 0xFFFF6060,
-  warn = 0xFFFFD050,
+  warn = 0xFFFFA030,
   panel = 0xB0000000,
   edge = 0xFF606060,
 }

@@ -14,9 +14,13 @@ local M = {}
 -- the same command tables and RAM layout (docs/how-it-works.md).
 M.SUPPORTED = { sfiii3nr1 = true, sfiii3n = true }
 
+-- Where Fightcade's training mode draws P1's input display at its defaults (13 rows of 10 px from
+-- y 60, icons 12.86 px wide from x 12). The card always leaves this clear, so it never moves
+-- when the display is toggled. Room for two icons per row (a direction and a button).
+M.FIGHTCADE_INPUT_DISPLAY = { x1 = 0, y1 = 60, x2 = 40, y2 = 190 }
+
 --- @param platform table see lua/input_grader/platform/fbneo.lua
---- @param options table|nil { player = 1|2, log_path = string|nil, overlay = table|nil,
----   avoid = fn() -> rectangles|nil }
+--- @param options table|nil { player = 1|2, log_path = string|nil, overlay = table|nil }
 function M.build(platform, options)
   options = options or {}
   if not M.SUPPORTED[platform.romname] then
@@ -32,8 +36,7 @@ function M.build(platform, options)
     clock = platform.clock,
     timestamp = platform.timestamp,
     log = options.log_path and platform.appender(options.log_path, csv.HEADER) or nil,
-    overlay = Overlay.new(options.overlay),
-    avoid = options.avoid,
+    overlay = Overlay.new(options.overlay or { avoid = { M.FIGHTCADE_INPUT_DISPLAY } }),
   })
 end
 

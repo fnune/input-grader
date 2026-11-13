@@ -9,9 +9,6 @@ require("input_grader.core.hooks").install()
 dofile("3rd_training.lua")
 
 local platform = require("input_grader.platform.fbneo").new()
-local app = require("input_grader.games.sfiii3").build(platform, {
-  log_path = GRADER .. "logs/attempts.csv",
-  avoid = require("input_grader.integrations.training_lua").avoid(_G),
-})
+local app = require("input_grader.games.sfiii3").build(platform, { log_path = GRADER .. "logs/attempts.csv" })
 require("input_grader.core.run").attach(platform, app)
 platform.print("input_grader loaded with 3rd_training_lua: Alt+7 bench, Alt+8 target move, Alt+9 hide")

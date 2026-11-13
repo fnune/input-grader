@@ -236,6 +236,16 @@ function Game:update()
   return graded
 end
 
+-- Steps shown and counted: trailing repeat steps (the dash's "and again") are left out, since
+-- the move is done before them.
+local function shown_steps(record)
+  local n = #record.steps
+  while n > 1 and record.steps[n][1] == CK.LEVER_REPEAT do
+    n = n - 1
+  end
+  return n
+end
+
 local function count(t)
   local n = 0
   for _ in pairs(t) do
@@ -291,8 +301,8 @@ function Game:is_attempt(record, run, p, targeted)
     return true
   end
   local n, last = evidence(self, record, run, p.frame + self.options.settle)
-  local needed = targeted and 1 or math.max(2, math.ceil(#record.steps / 2))
-  if n < math.min(needed, #record.steps) then
+  local needed = targeted and 1 or math.max(2, math.ceil(shown_steps(record) / 2))
+  if n < math.min(needed, shown_steps(record)) then
     return false
   end
   -- A finished motion may be followed by a late button (shown as late). An unfinished one counts
@@ -320,10 +330,20 @@ local function choose(self, p)
       local targeted = self.options.target == id
       local wanted = not self.options.target or targeted
       local fits = button_fits(record, p.pressed) or (p.started and p.started.slot == slot)
-      local run = wanted and fits and self.tracker:best_run(slot, since)
-      if run and self:is_attempt(record, run, p, targeted) then
-        local n, total = count(run.steps), #record.steps
-        local score = n / total
+      -- Of this move's recent runs, the one with the most done in order that counts as an attempt:
+      -- the latest run can be a fresh start that hides the real one.
+      local run, done = nil, -1
+      if wanted and fits then
+        for _, candidate_run in ipairs(self.tracker:runs_since(slot, since)) do
+          local n = evidence(self, record, candidate_run, p.frame + self.options.settle)
+          if n >= done and self:is_attempt(record, candidate_run, p, targeted) then
+            run, done = candidate_run, n
+          end
+        end
+      end
+      if run then
+        local total = shown_steps(record)
+        local score = math.min(done, total) / total
         local better = not best
           or score > best_score
           or (score == best_score and p.started and p.started.slot == slot)
@@ -423,9 +443,9 @@ function Game:diagnose(p, pick)
   return { code = "missing_step", text = "the game did not accept " .. want }
 end
 
--- A targeted move without a button (a dash) is an attempt when its motion completes, or when all
--- but one of its directions came (late ones included) before it fell apart: walking forward, or
--- a single tap, is not a failed dash. A failure is graded `settle` frames later, so a direction
+-- A targeted move without a button (a dash) is an attempt when its motion completes, or when every
+-- direction came, late ones included, but too late: walking forward, or a single tap, is not a
+-- failed dash. A failure is graded `settle` frames later, so a direction
 -- that came late is in the history to be named.
 function Game:buttonless_attempt(obs)
   local target = self.options.target
@@ -442,7 +462,7 @@ function Game:buttonless_attempt(obs)
     table.remove(self.pending_buttonless, 1)
     pick.run = due
     local n = evidence(self, record, due, self.frame)
-    if n >= math.max(2, #record.steps - 1) then
+    if n >= math.max(2, shown_steps(record)) then
       base.frame = due.reset.frame
       return self:grade_pick(base, pick)
     end
@@ -488,10 +508,11 @@ function Game:grade_pick(p, pick)
     side = p.facing_right and "right" or "left",
     ok = p.started ~= nil and p.started.slot == pick.slot,
     steps = {},
-    minimum = #record.steps - 1,
+    minimum = shown_steps(record) - 1,
   }
   local margin
-  for k, step in ipairs(record.steps) do
+  for k = 1, shown_steps(record) do
+    local step = record.steps[k]
     local s = { label = step_label(step) }
     if k > 1 and run.steps[k] and run.steps[k - 1] then
       s.used = run.steps[k] - run.steps[k - 1]
@@ -548,7 +569,8 @@ function Game:trace(p, pick)
     table.insert(trace.frames, { dir = inputs.lever_to_numpad(h.lever), press = inputs.buttons_text(h.pressed) })
   end
   local origin = first - 1
-  for k, step in ipairs(record.steps) do
+  for k = 1, shown_steps(record) do
+    local step = record.steps[k]
     local s = { label = step_label(step) }
     if run.steps[k] then
       s.at = run.steps[k] - origin

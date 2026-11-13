@@ -113,7 +113,7 @@ function Overlay.bench_lines(summary)
 end
 
 --- @param view table { attempt, bench (summary or nil), help (string or nil),
----   target_name, avoid (rectangles to keep clear) }
+---   target_name }
 function Overlay:draw(canvas, view)
   local c = self.config
   local lines = {}
@@ -147,7 +147,7 @@ function Overlay:draw(canvas, view)
   end
   local height = #lines * c.line_h + 6
   local y0 = c.y
-  local fit = layout.panel(y0, y0 + height, view.avoid)
+  local fit = layout.panel(y0, y0 + height, c.avoid)
   local x1, x2 = math.max(c.x, fit.x1), math.min(c.x + c.width, fit.x2)
   local max_chars = math.floor((x2 - x1 - 8) / c.char_w)
   canvas:box(x1, y0, x2, y0 + height, "panel", "edge")

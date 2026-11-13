@@ -159,4 +159,24 @@ return {
       T.eq(#Game.optional_directions(T.fighter(2).slots[29]), 0)
     end,
   },
+  {
+    "Ken's Shoryuken with a late 2 is graded as a late Shoryuken, not an unfinished Hadoken",
+    function()
+      local source = sources.sim(T.commands(), 11, 0)
+      local game = Game.new(source, T.commands())
+      local found
+      local timeline = inputs.timeline({ { 5, 6 }, { 6, 2 }, { 5, 7 }, { 2, 1 }, { 3, 1, "HP" } }, true)
+      for _ = 1, 30 do
+        table.insert(timeline, 0)
+      end
+      for _, raw in ipairs(timeline) do
+        source:push(raw, true)
+        for _, a in ipairs(game:update()) do
+          found = found or a
+        end
+      end
+      T.eq(found.move, "Shoryuken")
+      T.eq(found.error.code, "too_slow")
+    end,
+  },
 }

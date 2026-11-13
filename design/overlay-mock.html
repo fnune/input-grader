@@ -21,7 +21,7 @@
   <span>Scale</span><span id="scales"></span>
   <span>Position</span><span id="positions"></span>
   <span>Fightcade input display</span><span id="history"></span>
-<span id="toggles"></span>
+<span>Show</span><span id="toggles"></span>
 </div>
 <canvas id="screen" width="384" height="224"></canvas>
 <p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (Fightcade training mode's own icon sheet, read from your Fightcade install) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
@@ -83,7 +83,7 @@ const gui = {
 // ---- The overlay: plain drawing code meant to port line for line to Lua. ----
 const COL = {
   panel: 0x101018C8, edge: 0x5A5A6AFF, dim: 0x8A8A9AFF, text: 0xFFFFFFFF,
-  gold: 0xFFD23CFF, good: 0x4CD964FF, bad: 0xFF5A5AFF, warn: 0xFFCC33FF, button: 0xFFCC33FF,
+  gold: 0xFFD23CFF, good: 0x4CD964FF, bad: 0xFF5A5AFF, warn: 0xFFA030FF, button: 0x8A8A9AFF,
   window: 0xFFFFFF30, windowEdge: 0xFFFFFF70, buttonWindow: 0x4CD96440, cell: 0x2A2A36FF, cellHit: 0x2E5A3AFF,
 };
 
@@ -155,7 +155,7 @@ function reason(a) {
   const k = t.steps.findIndex(s => s.at === undefined);
   const step = k >= 0 ? t.steps[k] : null;
   const icon = step && !isNaN(Number(step.label)) ? { dir: Number(step.label) } : step ? step.label : "";
-  const btn = { btn: (a.button.label.match(/[LMH][PK]/) || ["LP"])[0] };
+  const btn = { btn: ((a.button && a.button.label.match(/[LMH][PK]/)) || ["LP"])[0] };
   const n = (a.error.text.match(/(\d+) frames?/) || [])[1];
   if (code === "skipped_step") return { parts: ["NO ", icon], step: k };
   if (code === "too_slow") return { parts: [icon, ` +${n}F LATE`], step: k };
@@ -165,8 +165,6 @@ function reason(a) {
   return { parts: [SHORT[code] || code], step: k };
 }
 
-// "used/allowed" text over a bar as long as the window (2 px a frame), filled to the frames used.
-// Green with room to spare, yellow in the last 2 frames, red past the end.
 // A box with the game HUD's bevelled corners: the border steps in one pixel per row for R rows
 // (3, as on the HUD's frames), or less when the box is too small. Built from gui.line only, so it
 // ports to Lua as is.
@@ -189,6 +187,17 @@ function rbox(x1, y1, x2, y2, fill, outline) {
     gui.line(x2 - r, y1, x2, y1 + r, outline);
     gui.line(x1, y2 - r, x1 + r, y2, outline);
     gui.line(x2 - r, y2, x2, y2 - r, outline);
+  }
+}
+
+// Neutral (stick at rest), in the style of Fightcade's arrows: a white ball, black outline. The
+// one icon used for neutral everywhere, at the arrows' sizes (13 in slots, 9 in played inputs).
+function neutralIcon(x, y, size) {
+  const r = size / 2 - 1, c = (size - 1) / 2;
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+    const d = Math.hypot(i - c, j - c);
+    if (d <= r - 1.2) gui.pixel(x + i, y + j, 0xFFFFFFFF);
+    else if (d <= r + 0.3) gui.pixel(x + i, y + j, 0x000000FF);
   }
 }
 
@@ -244,7 +253,8 @@ const safeUse = (used, window) => used <= Math.floor(window / 2);
 
 // "used/allowed" over a square bar spanning the column (left .. left + width). The bar covers the
 // window, or window plus overrun when late, with a notch where the window ends and a tick at its
-// half. Fill: green while safe, yellow past half the window, red past the end.
+// half. Fill: green while safe, orange past half the window, red past the end. Gold is kept for
+// achievements (the star, CLEAN, FRAME-PERFECT).
 // `used` null: the part never happened. The bar still shows how many frames it allows, empty,
 // under "-/10" or under `text` when given (CANCELLED).
 function meter(x, y, used, window, left, width, text) {
@@ -307,7 +317,7 @@ function columns(a) {
   t.steps.forEach((s, k) => {
     if (reach[k] === undefined && k > 0) {
       const d = Number(s.label);
-      const f = t.frames.findIndex((fr, i) => i + 1 > last && i + 1 <= Math.max(t.button_at, t.complete_at || 0) && fr.dir === d) + 1;
+      const f = t.frames.findIndex((fr, i) => i + 1 > last && i + 1 <= Math.max(t.button_at || n, t.complete_at || 0) && fr.dir === d) + 1;
       if (f > 0) reach[k] = f;
     }
     if (reach[k] !== undefined) last = reach[k];
@@ -320,7 +330,8 @@ function columns(a) {
   while (start1 > 1 && t.frames[start1 - 2].dir === t.frames[first - 1].dir) start1--;
   // An early button is shown where it was pressed, and the motion is followed to its end.
   const early = t.complete_at !== undefined && t.complete_at !== null && t.button_at < t.complete_at;
-  const end = early ? t.complete_at : t.button_at;
+  // Moves without a button (a dash) end where the motion completed or fell apart.
+  const end = t.button_at === undefined || t.button_at === null ? n : early ? t.complete_at : t.button_at;
   for (let f = start1; f <= Math.min(n, end); f++) {
     const k = reach.findIndex(at => at !== undefined && at >= f);
     const frame = t.frames[f - 1];
@@ -335,7 +346,20 @@ function columns(a) {
     } else if (k >= 0) cols[k].push(frame);
     else buttonCol.push({ dir: frame.dir, press: frame.press });
   }
-  return { reach, cols, buttonCol };
+  // Each column after the first starts where the player left the previous accepted input: still
+  // holding it is implied by the meter, so only new inputs are shown.
+  const leftover = (frames, dir) => {
+    let i = 0;
+    while (i < frames.length && frames[i].dir === dir && !frames[i].press) i++;
+    return frames.slice(i);
+  };
+  for (let k = 1; k < cols.length; k++) {
+    const prevAt = reach[k - 1];
+    if (prevAt !== undefined) cols[k] = leftover(cols[k], t.frames[prevAt - 1].dir);
+  }
+  const lastAt = reach.filter(at => at !== undefined).pop();
+  const trimmedButton = lastAt !== undefined ? leftover(buttonCol, t.frames[lastAt - 1].dir) : buttonCol;
+  return { reach, cols, buttonCol: trimmedButton };
 }
 
 // Consecutive equal frames as runs { dir, press, n }.
@@ -360,7 +384,7 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
   runs.forEach((r, i) => {
     let ix = x;
     if (culprit(r)) rbox(x - 2, y - 2, x + Math.max(RUN_W(r), 9) + 1, y + 10, 0xFF5A5A60, COL.bad);
-    if (r.dir === 5) rbox(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
+    if (r.dir === 5) neutralIcon(ix, y, 9);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
     // Frames held, right after the direction it belongs to.
@@ -375,7 +399,9 @@ function drawLane(a, opt) {
   const t = a.trace;
   const y0 = opt.position === "top" ? 56 : opt.position === "middle" ? 104 : 152;
   const height = 52, tabH = 11;
-  const avoid = opt.history === "on" ? [fightcadeInputs(a)] : [];
+  // The card always leaves room for Fightcade's input display, shown or not, so it never moves.
+  if (opt.history === "on") fightcadeInputs(a);
+  const avoid = [{ x1: 0, y1: 60, x2: 40, y2: 190 }];
   const fit = panelFit(y0 - tabH, y0 + height, avoid);
   const x0 = fit.x1;
   const ok = a.ok;
@@ -407,14 +433,19 @@ function drawLane(a, opt) {
     return Math.max(slot, runsW, meterW, label);
   };
   let gridW = 0;
-  for (let k = 0; k <= t.steps.length; k++) gridW += colW(k) + (k > 0 ? GAP : 0);
+  const hasButton = !!a.button;
+  const lastCol = hasButton ? t.steps.length : t.steps.length - 1;
+  for (let k = 0; k <= lastCol; k++) gridW += colW(k) + (k > 0 ? GAP : 0);
   const x1 = Math.min(fit.x2, x0 + PAD + gridW + PAD);
 
   // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
-  gui.text(x0 + 1, y0 - tabH + 2, name, COL.text);
+  // A targeted move is marked with a crosshair in front of its name.
+  const nameX = opt.target ? x0 + 1 + 4 * 7 : x0 + 1;
+  if (opt.target) gui.text(x0 + 1, y0 - tabH + 2, "TARGET", COL.dim);
+  gui.text(nameX, y0 - tabH + 2, name, COL.text);
   const tail = safe ? [perfect ? "FRAME-PERFECT" : "CLEAN"] : r.parts;
-  const tx = inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.warn);
+  const tx = inline(nameX + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.bad);
   if (safe && !perfect) inline(tx + 6, y0 - tabH + 2, r.parts, COL.dim);
 
   // The box, tinted with the verdict.
@@ -425,7 +456,7 @@ function drawLane(a, opt) {
   // that column's time, row 3 the timing meter.
   const ny = y0 + 11, ry = y0 + 23, my = y0 + 37;
   let cx = gx;
-  for (let k = 0; k <= t.steps.length; k++) {
+  for (let k = 0; k <= lastCol; k++) {
     const w = colW(k), mid = cx + Math.floor(w / 2);
     if (cx + w > x1 - 2) break;
     if (k > 0) gui.line(cx - GAP / 2, y0 + PAD, cx - GAP / 2, y0 + height - PAD, 0xFFFFFF18);
@@ -453,11 +484,11 @@ function drawLane(a, opt) {
         else gui.text(mid - 2 * 5, my, "EARLY", COL.bad);
       }
     } else {
-      const s = t.steps[k], d = Number(s.label), prev = reach[k - 1];
+      const s = t.steps[k], d = Number(s.label.replace("~", "")), prev = reach[k - 1];
       const accepted = s.at !== undefined, missed = !ok && r.step === k;
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
       rbox(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
-      if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
+      if (d === 5) neutralIcon(mid - 5, ny - 5, 11); else if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);
         gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);
@@ -470,24 +501,81 @@ function drawLane(a, opt) {
       if (k === 0) runs.forEach(run => { run.counted = true; });
       if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
       else gui.text(mid - 6, ry + 1, "---", COL.bad);
-      if (k === 0) gui.text(mid - 10, my, "START", COL.dim);
-      else if (missed && a.error.code === "cancelled") meter(mid, my, null, s.window, cx, w, "CANCELLED");
+      if (k === 0) {
+        // The first input has no timing: nothing comes before it.
+      } else if (missed && a.error.code === "cancelled") meter(mid, my, null, s.window, cx, w, "CANCELLED");
       else if (s.window && prev !== undefined && reach[k] !== undefined) meter(mid, my, reach[k] - prev, s.window, cx, w);
       else if (s.window) meter(mid, my, null, s.window, cx, w);
     }
     cx += w + GAP;
   }
   if (safe) star(x1 - 7, y0 - 4, COL.gold);
+  return { x0, x1, y0, y1: y0 + height };
+}
+
+
+function isClean(a) {
+  if (!a || !a.ok) return false;
+  const t = a.trace;
+  const steps = t.steps.every((st, k) => !st.window || k === 0 || st.at === undefined || t.steps[k - 1].at === undefined ||
+    safeUse(st.at - t.steps[k - 1].at, st.window));
+  const button = t.complete_at === undefined || t.complete_at === null || t.button_at === undefined ||
+    safeUse(t.button_at - t.complete_at, t.button_window);
+  return steps && button;
+}
+
+// Recent attempts as dots under the card (the last 12, oldest on the left), within the card's
+// width. The one shown is outlined; the text says how far back it is. Page Up / Page Down step.
+function drawHistory(box, attempts, shown) {
+  const first = Math.max(0, Math.min(shown - 6, attempts.length - 12));
+  const visible = attempts.slice(first, first + 12);
+  const y = box.y1 + 4;
+  let x = box.x0 + 2;
+  visible.forEach((a, i) => {
+    const c = !a ? COL.dim : isClean(a) ? COL.gold : a.ok ? COL.good : COL.bad;
+    if (first + i === shown) gui.box(x - 2, y - 2, x + 4, y + 4, 0x00000000, COL.text);
+    gui.box(x, y, x + 2, y + 2, c, c);
+    x += 7;
+  });
+  const back = attempts.length - 1 - shown;
+  gui.text(x + 2, y - 2, back === 0 ? "LIVE" : `-${back}`, back === 0 ? COL.dim : COL.text);
+}
+
+// The target picker (Alt+8): every move of the character, the selected one highlighted. Moves
+// without a button (dashes, parries) are listed too: they are graded only while targeted.
+function drawPicker(moves, selected) {
+  const rows = [{ name: "ALL MOVES", notation: "" }].concat(moves);
+  const x0 = 44, y0 = 40, rowH = 11;
+  const shown = rows.slice(0, 14);
+  const width = 150, height = 14 + shown.length * rowH;
+  rbox(x0, y0, x0 + width, y0 + height, COL.panel, COL.edge);
+  gui.text(x0 + 5, y0 + 4, "TARGET", COL.text);
+  gui.text(x0 + width - 4 - 4 * 11, y0 + 4, "ALT+8 NEXT", COL.dim);
+  shown.forEach((m, i) => {
+    const y = y0 + 14 + i * rowH;
+    if (i === selected) {
+      rbox(x0 + 2, y - 2, x0 + width - 2, y + rowH - 3, 0xFFFFFF20, COL.text);
+    }
+    const x = inline(x0 + 15, y, m.notation ? notationParts(m.notation) : [], COL.text);
+    gui.text(Math.max(x + 4, x0 + 62), y, m.name.toUpperCase(), i === selected ? COL.text : COL.dim);
+  });
 }
 
 // ---- Page controls ----
-const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on" };
+const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null };
 function render() {
   const cv = document.getElementById("screen");
   cv.style.width = W * state.scale + "px"; cv.style.height = H * state.scale + "px";
   ctx.clearRect(0, 0, W, H);
   if (bg.complete) ctx.drawImage(bg, 0, 0);
-  drawLane(SCENARIOS[state.scenario].attempt, state);
+  const sc = SCENARIOS[state.scenario];
+  const box = drawLane(sc.attempt, Object.assign({}, state, { target: sc.target }));
+  if (state.browse) drawHistory(box, SCENARIOS.map(x => x.attempt), state.scenario);
+  if (state.picker) {
+    const moves = sc.moves || [];
+    const current = sc.target ? moves.findIndex(m => m.id === sc.target) + 1 : 0;
+    drawPicker(moves, state.pick === null ? current : state.pick);
+  }
   const c = cv.getContext("2d"); c.clearRect(0, 0, W, H); c.drawImage(fb, 0, 0);
   for (const el of document.querySelectorAll("[data-k]")) el.classList.toggle("on", String(state[el.dataset.k]) === el.dataset.v);
 }
@@ -504,10 +592,21 @@ buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
 buttons("positions", "position", ["bottom", "middle", "top"]);
 buttons("history", "history", ["off", "on"]);
 const tg = document.getElementById("toggles");
-for (const k of []) {
+for (const k of ["browse", "picker"]) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";
   b.onclick = () => { state[k] = !state[k]; render(); }; tg.appendChild(b);
 }
+// Page Up / Page Down browse attempts; arrow keys move the picker selection.
+document.addEventListener("keydown", e => {
+  if (e.key === "PageUp" && state.scenario > 0) { state.scenario--; state.pick = null; }
+  else if (e.key === "PageDown" && state.scenario < SCENARIOS.length - 1) { state.scenario++; state.pick = null; }
+  else if (state.picker && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    const n = (SCENARIOS[state.scenario].moves || []).length + 1;
+    const cur = state.pick === null ? 0 : state.pick;
+    state.pick = (cur + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+  } else return;
+  e.preventDefault(); render();
+});
 bg.onload = render; render();
 </script>
 </body>

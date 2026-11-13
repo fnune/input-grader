@@ -1,13 +1,3 @@
--- Measures when a player can act again after an action, by experiment: from the same save
--- state, do the action, then press a button k frames later for k = 1..N, and record whether the
--- press started a move. Also logs the timing fields the game tags each animation frame with
--- (cg_type, cg_ctr, permited_koa), to find which RAM signal marks the first actionable frame.
---
--- mame sfiii3n -rompath roms -video none -sound none -nothrottle -state_directory build/mame/sta \
---   -autoboot_script harness/mame/actionable.lua
--- Environment: ACTION (dash | backdash | jump, default dash), PRESS (LP | LPLK, default LP),
--- ACT_OUT (report path, default build/actionable-<action>-<press>.txt).
-
 package.path = "harness/mame/?.lua;lua/?.lua;lua/?/init.lua;" .. package.path
 
 local S = require("session")
@@ -31,7 +21,6 @@ local function state()
     cg_type = S.u8(P1 + CG_TYPE),
     cg_ctr = S.u8(P1 + CG_CTR),
     permited = S.u16(P1 + PERMITED),
-    -- The input word the game read this frame (WORK_CP.sw_new), to line presses up with tags.
     sw_new = S.u16(0x02026318 + 2),
   }
 end
@@ -40,8 +29,6 @@ local function key(st)
   return table.concat(st.r, ".")
 end
 
--- Plays the action, then neutral; with `at`, presses the button for 1 frame `at` frames after
--- the action's last input. Returns the per-frame log from the action's last input on.
 local function play(at, frames)
   local log = {}
   local script = {}

@@ -5,7 +5,6 @@ local T = require("helpers")
 
 local RYU = 2
 
--- Play a script against Ryu (super art I) and return every graded attempt.
 local function play(script, opts)
   opts = opts or {}
   local source = sources.sim(T.commands(), RYU, opts.super_art or 0)

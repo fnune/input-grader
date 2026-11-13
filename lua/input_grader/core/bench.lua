@@ -1,6 +1,3 @@
--- Bench sessions: count attempts between start and stop, and summarise them per move.
--- Works on the game-agnostic attempt records every game module produces.
-
 local Bench = {}
 Bench.__index = Bench
 

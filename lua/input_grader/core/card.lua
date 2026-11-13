@@ -1,8 +1,3 @@
--- The attempt card, ported from design/overlay-mock.html (drawLane): the move's name and a reason
--- above a grid with one column per step plus the button. Row 1 is what the move needs, row 2 what
--- the player did in that step's time, row 3 the timing meter. Game-agnostic: it reads the
--- attempt record and its `trace` (docs/porting.md).
-
 local draw = require("input_grader.core.draw")
 
 local COL = draw.COL
@@ -21,8 +16,6 @@ local SHORT = {
   not_allowed = "REFUSED",
 }
 
--- The numpad direction of a step label ("6", "~6" for any direction with forward), or nil for
--- labels that are not one direction ("LP", "[4]", "360").
 local function label_dir(label)
   local d = tonumber((label or ""):match("^~?(%d)$"))
   return d
@@ -132,7 +125,6 @@ function M.columns(attempt)
     cols[k] = {}
   end
   local first = reach[1] or 1
-  -- Step 1 shows the hold it matched; a "then let go" step also shows the hold before the release.
   local start = first
   while start > 1 and frames[start - 1].dir == frames[first].dir do
     start = start - 1
@@ -143,12 +135,8 @@ function M.columns(attempt)
       start = start - 1
     end
   end
-  -- An early button is shown where it was pressed, and the motion followed to its end. Moves
-  -- without a button end where the motion completed or fell apart.
   local early = t.complete_at ~= nil and t.button_at ~= nil and t.button_at < t.complete_at
   local stop = (t.button_at == nil and n) or (early and t.complete_at) or t.button_at
-  -- The column of frame f: the step it satisfied, or the next step to come. When one frame
-  -- satisfies several steps (6 let go straight into 2), it belongs to the last of them.
   local function step_at_or_after(f)
     local found
     for k = 1, #t.steps do
@@ -166,8 +154,6 @@ function M.columns(attempt)
     if early and k then
       table.insert(cols[k], frame)
     elseif f == t.button_at then
-      -- The press, with the direction held on that frame unless a step was accepted on it (the
-      -- optional last 6 of a super pressed with the punch shows as 6+P).
       local step_here = k ~= nil and reach[k] == f
       table.insert(button_col, { dir = step_here and 0 or frame.dir, press = frame.press })
       if step_here then
@@ -179,8 +165,6 @@ function M.columns(attempt)
       table.insert(button_col, frame)
     end
   end
-  -- Each column after the first starts where the player left the previous accepted input: still
-  -- holding it is implied by the meter.
   local function leftover(list, dir)
     local i = 1
     while list[i] and list[i].dir == dir and list[i].press == "" do
@@ -233,7 +217,6 @@ local function buttons_of(press)
   return out
 end
 
--- Frames held are shown only where no meter says it already: the first column.
 local function count_w(r)
   return (r.counted and r.dir ~= 0 and r.n > 1) and draw.CHAR_W * #tostring(r.n) + 1 or 0
 end
@@ -317,7 +300,6 @@ function M.draw(canvas, attempt, opts)
   end
   local x1 = math.min(opts.max_x1 or 376, x0 + M.PAD + grid_w + M.PAD)
 
-  -- Name and reason above the box, as plain outlined text.
   local name = attempt.move:upper()
   local ty = y0 - M.NAME_H + 2
   local name_x = x0 + 1
@@ -333,7 +315,6 @@ function M.draw(canvas, attempt, opts)
     draw.inline(canvas, tx + 6, ty, r.parts, COL.dim)
   end
 
-  -- The box, tinted with the verdict.
   draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)
   draw.rbox(canvas, x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, draw.alpha(verdict, 0x28))
 
@@ -349,7 +330,6 @@ function M.draw(canvas, attempt, opts)
       canvas:line(cx - M.GAP / 2, y0 + M.PAD, cx - M.GAP / 2, y0 + height - M.PAD, COL.divider)
     end
     if k > #t.steps then
-      -- The button. Optional directions (the last 6 of 236236+P) sit before it in dashed boxes.
       local c = ok and COL.good or (r.button and COL.bad or COL.neutral_slot)
       local optional = t.optional or {}
       local bx = mid + #optional * 8
@@ -392,7 +372,6 @@ function M.draw(canvas, attempt, opts)
         canvas:text(mid - 2 * #s.label, ny - 3, s.label, COL.text)
       end
       if s.release then
-        -- "Then let go": a small neutral ball on the slot's lower-right corner.
         draw.neutral(canvas, mid + 3, ny + 2, 7)
       end
       if not accepted and missed and reach[k] == nil then
@@ -409,7 +388,6 @@ function M.draw(canvas, attempt, opts)
       elseif reach[k] == nil then
         canvas:text(mid - 6, ry + 1, "---", COL.bad)
       end
-      -- The first input has no timing: nothing comes before it.
       local prev = reach[k - 1]
       if k > 1 and missed and attempt.error.code == "cancelled" then
         draw.meter(canvas, mid, my, nil, s.window, cx, w, "CANCELLED")
@@ -421,7 +399,6 @@ function M.draw(canvas, attempt, opts)
     end
     cx = cx + w + M.GAP
   end
-  -- The sparkle sits on the top-right corner, nudged 1 px in over the bevel.
   if starred then
     draw.star(canvas, x1 - 5, y0 - 3)
   end

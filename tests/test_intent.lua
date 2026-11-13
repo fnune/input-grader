@@ -23,7 +23,6 @@ local function attempts(script, opts)
   return found
 end
 
--- Moving around and pressing buttons between reps, which must not be graded as attempts.
 local MOVEMENT = {
   { "forward dash, then jab", { { 5, 4 }, { 6, 1 }, { 5, 2 }, { 6, 1 }, { 5, 14 }, { 5, 1, "LP" } } },
   { "back dash, then fierce", { { 5, 4 }, { 4, 1 }, { 5, 2 }, { 4, 1 }, { 5, 14 }, { 5, 1, "HP" } } },

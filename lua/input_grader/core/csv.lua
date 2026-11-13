@@ -1,5 +1,3 @@
--- One CSV row per attempt, for comparing sessions in a spreadsheet.
-
 local M = {}
 
 M.HEADER = "time,game,character,move,notation,side,result,error,steps,button_after,button_window,total,minimum,margin"

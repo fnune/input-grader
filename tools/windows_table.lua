@@ -1,6 +1,3 @@
--- Print docs/windows.md: every character's graded moves with each step's frame window.
--- Usage: lua tools/windows_table.lua > docs/windows.md
-
 package.path = "lua/?.lua;lua/?/init.lua;" .. package.path
 
 local C = require("input_grader.games.sfiii3.constants")

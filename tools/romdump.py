@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Decrypt the 3rd Strike program SIMMs (06000000-06FFFFFF) from an sfiii3 ROM set.
-
-Usage: romdump.py <sfiii3.zip> <out prog.bin>
-
-CPS3 program SIMMs are four 2 MB chips, one byte lane each, XORed with an address mask.
-The mask is MAME's cps3_state::cps3_mask with the 3rd Strike keys.
-"""
 import sys
 import zipfile
 from pathlib import Path

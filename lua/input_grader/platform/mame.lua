@@ -1,12 +1,7 @@
--- MAME adapter, for the headless checks and screenshots. Same interface as platform/fbneo.lua.
--- MAME has no gd, so icons fall back to line drawings; text is drawn with FBNeo's own font
--- (core/font.lua), so screenshots match what Fightcade shows.
-
 local font = require("input_grader.core.font")
 
 local M = {}
 
--- MAME draws in ARGB; the overlay uses RGBA.
 local function argb(rgba)
   local a = rgba % 256
   return a * 0x1000000 + math.floor(rgba / 256)
@@ -74,7 +69,6 @@ function M.new(manager, emu)
     fill(x1, y1 + 1, x1, y2 - 1, outline)
     fill(x2, y1 + 1, x2, y2 - 1, outline)
   end
-  -- FBNeo's text: 4 px glyphs with a 1 px black outline around every lit pixel.
   function canvas.text(_, x, y, s, c)
     for i = 1, #s do
       local glyph = font[s:byte(i) - 31]
@@ -110,11 +104,9 @@ function M.new(manager, emu)
   end
   p.canvas = canvas
 
-  -- MAME cancels a notifier when its subscription object is garbage-collected, so the
-  -- subscriptions live in the module table, which package.loaded keeps alive.
-  M.subscriptions = M.subscriptions or {}
+  M.subscriptions_kept_from_gc = M.subscriptions_kept_from_gc or {}
   local frame_fns, draw_fns = {}, {}
-  table.insert(M.subscriptions, {
+  table.insert(M.subscriptions_kept_from_gc, {
     emu.add_machine_frame_notifier(function()
       for _, fn in ipairs(frame_fns) do
         fn()

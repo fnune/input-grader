@@ -1,7 +1,6 @@
 local hooks = require("input_grader.core.hooks")
 local T = require("helpers")
 
--- A fake of FBNeo's Lua API: one callback per hook, like the real emulator.
 local function fake_fbneo(memory_reader)
   local env = { registered = {}, hotkeys = {}, printed = {}, drawn = {} }
   local function slot(name)

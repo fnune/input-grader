@@ -1,6 +1,3 @@
--- MAME session helpers for the validation harness: memory, inputs held per frame, and a
--- coroutine scheduler that advances one step per emulated frame.
-
 local M = {}
 
 local machine = manager.machine
@@ -39,7 +36,6 @@ function M.w8(a, v)
   space:write_u8(a, v)
 end
 
--- Names of the P1 controls as MAME's CPS3 driver labels them.
 M.P1 = {
   up = "P1 Up",
   down = "P1 Down",

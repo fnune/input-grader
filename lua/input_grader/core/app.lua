@@ -1,14 +1,3 @@
--- The overlay app: keeps the graded attempts, which one is shown, the target picker, the bench
--- and visibility, and draws the card, pearls, picker or bench result. Game-agnostic: the game
--- module provides :update() -> attempts, :moves() and :set_target(id).
---
--- Controls are plain keys read every frame (no setup in the emulator), plus the stick and buttons
--- inside the picker:
---   M          open or close the target picker (stick up/down to move, LP to pick, LK to close)
---   B          start a bench session, or stop it and show the result
---   H          hide or show the overlay
---   Page Up/Down  step through recent attempts; a new attempt returns to the latest
-
 local bench_panel = require("input_grader.core.bench_panel")
 local card = require("input_grader.core.card")
 local csv = require("input_grader.core.csv")
@@ -23,7 +12,6 @@ App.__index = App
 
 App.HISTORY = 20
 App.HELP = "M TARGET   B BENCH   H HIDE   PGUP/PGDN HISTORY"
--- The card's box sits so the pearls under it leave the same 3 px above the game's bottom HUD.
 App.CARD_Y = 145
 
 --- @param deps table { game, bench, clock = fn() -> seconds, timestamp = fn() -> string,

@@ -1,9 +1,3 @@
--- End-to-end check in the real game: the live grader (RAM source, platform/mame) grades
--- scripted attempts, and each must get the expected verdict. Optionally saves snapshots.
---
--- mame sfiii3n -rompath roms -video none -sound none -nothrottle -autoboot_script harness/mame/grade.lua
--- Environment: GRADE_SNAPSHOTS=1 to save screenshots (needs a video backend), GRADE_OUT (report path).
-
 package.path = "harness/mame/?.lua;lua/?.lua;lua/?/init.lua;" .. package.path
 
 local S = require("session")
@@ -30,7 +24,6 @@ function app:frame()
 end
 run.attach(platform, app)
 
--- Steps as text for the report: "2  3 2/10  6 2/10  LP 0/10".
 local function steps_line(a)
   local parts = {}
   for _, st in ipairs(a.steps or {}) do
@@ -43,7 +36,6 @@ local function steps_line(a)
   return table.concat(parts, "  ")
 end
 
--- name, script, expected move, expected ok, expected error code
 local CASES = {
   { "clean Hadoken", { { 5, 20 }, { 2, 2 }, { 3, 2 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", true },
   { "skipped diagonal", { { 5, 20 }, { 2, 3 }, { 6, 1, "LP" }, { 5, 70 } }, "Hadoken", false, "skipped_step" },
@@ -68,10 +60,8 @@ local CASES = {
     false,
     "early_button",
   },
-  -- Pressing LP on 2 starts a crouching jab, so the release that completes the motion comes
-  -- while Ryu is busy and no Hadoken starts: early button is the right verdict here.
   {
-    "press on 2, release on 6",
+    "press on 2 starts a cr.LP, so the release on 6 is an early button",
     { { 5, 20 }, { 2, 1, "LP" }, { 3, 1, "LP" }, { 6, 1 }, { 5, 70 } },
     "Hadoken",
     false,

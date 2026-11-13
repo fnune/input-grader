@@ -1,5 +1,3 @@
--- Constants of the game's command system, named as in the arcade decomp's include/cmd_data.h.
-
 local M = {}
 
 M.SLOTS = 56
@@ -57,11 +55,9 @@ M.BT_EX = 0x400
 M.BT_SHELL = 0x800
 M.EX_BUTTON = 0xF
 
--- conpane: WORK_CP read as an array of u16 (sw_lvbt, sw_new, sw_old, sw_now, sw_off, sw_chg).
 M.CONPANE = { [0] = "sw_lvbt", [1] = "sw_new", [2] = "sw_old", [3] = "sw_now", [4] = "sw_off", [5] = "sw_chg" }
 M.BT_PRESS, M.BT_PRESS_OR_RELEASE = 3, 5
 
--- cmdshot_conv_tbl (PLS03_tbl.c), 1-based: entry i + 1 is exdt value i.
 M.SHOT_CONV = {
   0x10,
   0x20,
@@ -97,20 +93,15 @@ M.SHOT_CONV = {
   0,
 }
 
--- Two or three buttons of a group pressed or let go together (pl_lvr_set).
 M.TWO_PUNCHES = { [0x70] = true, [0x30] = true, [0x50] = true, [0x60] = true }
 M.TWO_KICKS = { [0x700] = true, [0x300] = true, [0x500] = true, [0x600] = true }
 
--- lvr_chk_tbl[0]: the diagonals counted by sw_pick_up (lu, ld, ru, rd).
 M.LVR_CHK = { 5, 6, 9, 10 }
 
--- chk22_tbl: the eight directions a CK_ROTATE step needs.
 M.ROTATE_DIRS = { 1, 9, 8, 10, 2, 6, 4, 5 }
 
--- ukemi_time_tbl, 1-based.
 M.UKEMI_TIME = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 7 }
 
--- Index of s1_cnt in the sw_pick_up counters (up, down, left, right, s1 .. s6, lu .. rd).
 M.CNT_S1 = 5
 
 return M

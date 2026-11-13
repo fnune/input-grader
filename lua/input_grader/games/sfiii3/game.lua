@@ -1,6 +1,3 @@
--- The 3rd Strike game module: turns check frames from a source (RAM or the Lua checker) into
--- graded attempts in the game-agnostic format described in docs/porting.md.
-
 local bits = require("input_grader.core.bits")
 local History = require("input_grader.core.history")
 local C = require("input_grader.games.sfiii3.constants")
@@ -15,7 +12,6 @@ Game.__index = Game
 
 local DEFAULTS = { lookback = 60, settle = 12, late_grace = 8, unfinished_gap = 3 }
 
--- Steps whose `time` is the number of frames allowed since the previous step matched.
 local TIMED = {
   [CK.LEVER] = true,
   [CK.LEVER_PRESS] = true,
@@ -107,7 +103,6 @@ function Game:moves()
         notation = record.notation,
         slot = slot,
         buttonless = band(record.btix, C.BT_INDEX) == C.BT_NONE,
-        -- System moves (dashes, high jump, parries, mashing) live below the super art slots.
         other = slot < C.SA_GROUND,
       })
     end
@@ -235,8 +230,6 @@ function Game:update()
   return graded
 end
 
--- Steps shown and counted: trailing repeat steps (the dash's "and again") are left out, since
--- the move is done before them.
 local function shown_steps(record)
   local n = #record.steps
   while n > 1 and record.steps[n][1] == CK.LEVER_REPEAT do
@@ -245,11 +238,6 @@ local function shown_steps(record)
   return n
 end
 
--- One matched step is an attempt only when a later step's direction followed it (2 then 6
--- for a Hadoken), so a crouching normal does not count as a failed Hadoken.
--- How much of a motion the player did, in order: the steps the game accepted, then the remaining
--- directions as they followed in the input history (one may be missing, for a skipped
--- diagonal). Returns the count and the frame of the last of them.
 local function evidence(self, record, run, last_frame)
   local n, last = 0, run.start
   while run.steps[n + 1] do
@@ -263,7 +251,6 @@ local function evidence(self, record, run, last_frame)
   for k = n + 1, #record.steps do
     local step, found = record.steps[k], nil
     if LEVER_STEPS[step[1]] then
-      -- Only a direction that newly arrives counts: holding 6 is one 6, not two.
       for _, h in ipairs(self.history:range(cursor + 1, last_frame)) do
         local before = self.history:at(h.frame - 1)
         local arrived = not before or before.lever ~= h.lever
@@ -296,17 +283,12 @@ function Game:is_attempt(record, run, p, targeted)
   if n < math.min(needed, shown_steps(record)) then
     return false
   end
-  -- A finished motion may be followed by a late button (shown as late). An unfinished one counts
-  -- only while it was still going when the button came: a crouch held for a while before a
-  -- cr.HP is not a missed Shoryuken.
   if run.complete then
     return p.frame - last <= record.reset - 2 + self.options.late_grace
   end
   return p.frame - last <= self.options.unfinished_gap
 end
 
--- Ground moves (super arts from slot 20, specials from 28) only on the ground, air ones (from
--- 38) only in the air.
 local function ground_matches(slot, airborne)
   local air = slot >= C.SA_AIR
   return air == (airborne == true)
@@ -321,8 +303,6 @@ local function choose(self, p)
       local targeted = self.options.target == id
       local wanted = not self.options.target or targeted
       local fits = button_fits(record, p.pressed) or (p.started and p.started.slot == slot)
-      -- Of this move's recent runs, the one with the most done in order that counts as an attempt:
-      -- the latest run can be a fresh start that hides the real one.
       local run, done = nil, -1
       if wanted and fits then
         for _, candidate_run in ipairs(self.tracker:runs_since(slot, since)) do
@@ -542,8 +522,6 @@ end
 --- relative to the first frame of `frames` (1-based), so the record stays game-agnostic.
 function Game:trace(p, pick)
   local record, run = pick.record, pick.run
-  -- Reach back over the whole hold of step 1's direction: a held 2 is re-accepted every 11
-  -- frames, so the accepted frame is often late in the hold.
   local first = run.steps[1] or run.start
   local held = self.history:at(first)
   while held and first > 1 and first > p.frame - 90 do
@@ -566,7 +544,6 @@ function Game:trace(p, pick)
     if run.steps[k] then
       s.at = run.steps[k] - origin
     end
-    -- "6, then let go" (the Shoryuken's first step): accepted on the release.
     if step[1] == CK.LEVER_OFF then
       s.release = true
     end

@@ -28,17 +28,13 @@
 <p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (Fightcade training mode's own icon sheet, read from your Fightcade install) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
 
 <script>
-// ---- A stand-in for FBNeo's gui library: same calls, same coordinates, RGBA colours. ----
 const W = 384, H = 224;
 const fb = document.createElement("canvas"); fb.width = W; fb.height = H;
 const ctx = fb.getContext("2d");
 const bg = new Image(); bg.src = "background.png";
-// Fightcade training mode's icon sheet (fbneo-training-mode, inputs/scrolling-input/icons-capcom-32.png),
-// read from the local Fightcade install through build/fightcade-training; never copied into the repo.
 const SHEET = new Image(); SHEET.onload = () => render();
 SHEET.src = "../build/fightcade-training/inputs/scrolling-input/icons-capcom-32.png";
 const SHEET_ROW = { l: 0, r: 1, u: 2, d: 3, ul: 4, ur: 5, dl: 6, dr: 7, LP: 8, MP: 9, HP: 10, LK: 11, MK: 12, HK: 13 };
-// Numpad digit to the sheet's absolute direction, for a player facing right (mirrored when facing left).
 function dirKey(d, facingRight = true) {
   const k = { 1: "dl", 2: "d", 3: "dr", 4: "l", 6: "r", 7: "ul", 8: "u", 9: "ur" }[d];
   return facingRight || !k ? k : k.replace("l", "_").replace("r", "l").replace("_", "r");
@@ -48,7 +44,6 @@ function rgba(c) { return `rgba(${c >>> 24 & 255},${c >>> 16 & 255},${c >>> 8 & 
 function px(x, y, c) { if (x < 0 || y < 0 || x >= W || y >= H) return; ctx.fillStyle = rgba(c); ctx.fillRect(x, y, 1, 1); }
 const gui = {
   pixel: px,
-  // FBNeo's box: inclusive corners, fill inside, outline on the border.
   box(x1, y1, x2, y2, fill, outline) {
     [x1, x2] = [Math.min(x1, x2), Math.max(x1, x2)]; [y1, y2] = [Math.min(y1, y2), Math.max(y1, y2)];
     ctx.fillStyle = rgba(fill); ctx.fillRect(x1 + 1, y1 + 1, x2 - x1 - 1, y2 - y1 - 1);
@@ -60,8 +55,6 @@ const gui = {
     let dx = Math.abs(x2 - x1), dy = -Math.abs(y2 - y1), sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1, e = dx + dy;
     for (;;) { px(x1, y1, c); if (x1 === x2 && y1 === y2) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x1 += sx; } if (e2 <= dx) { e += dx; y1 += sy; } }
   },
-  // gui.image(x, y, gdStr): a PNG at its own size.
-  // gui.image(x, y, gdStr) of a sheet cell resampled to w x h, as the training mode prepares its icons.
   image(x, y, key, w, h) {
     if (!SHEET.complete || !SHEET.naturalWidth || SHEET_ROW[key] === undefined) return;
     ctx.imageSmoothingEnabled = true; ctx.drawImage(SHEET, 0, SHEET_ROW[key] * 32, 32, 32, x, y, w, h);
@@ -81,7 +74,6 @@ const gui = {
   },
 };
 
-// ---- The overlay: plain drawing code meant to port line for line to Lua. ----
 const COL = {
   panel: 0x101018C8, edge: 0x5A5A6AFF, dim: 0x8A8A9AFF, text: 0xFFFFFFFF,
   gold: 0xFFD23CFF, good: 0x4CD964FF, bad: 0xFF5A5AFF, warn: 0xFFA030FF, button: 0x8A8A9AFF,
@@ -100,8 +92,6 @@ function panelFit(y1, y2, avoid) {
   return { x1, x2, compact: x2 - x1 < LAYOUT.COMPACT_BELOW };
 }
 
-// Fightcade training mode's scrolling input display (Dammit's, in fbneo-training-mode) at its defaults:
-// 10 px rows, icons 12.86 px wide, 1 icon-width from the left, 6 rows from the top, 13 lines, newest on top.
 function fightcadeInputs(a) {
   const ICON = 10, IW = 10 * (384 / 224) / (4 / 3), X0 = Math.floor(IW), Y0 = 6 * ICON;
   const lines = [];
@@ -112,7 +102,6 @@ function fightcadeInputs(a) {
     prev = key;
   }
   lines.reverse();
-  // Older play before the attempt, so the column is as full as it usually is.
   const filler = [{ dir: 6, press: "" }, { dir: 2, press: "MK" }, { dir: 4, press: "" }, { dir: 5, press: "HP" }, { dir: 3, press: "" }];
   for (let i = 0; lines.length < 13; i++) lines.push(filler[i % filler.length]);
   const shown = lines.slice(0, 13);
@@ -129,7 +118,6 @@ function fightcadeInputs(a) {
 
 function dirVec(d) { return [((d - 1) % 3) - 1, -(Math.floor((d - 1) / 3) - 1)]; }
 
-// An arrow for a numpad direction, centred on (cx, cy), about 2r+1 pixels across.
 function arrow(cx, cy, d, r, c) {
   const [vx, vy] = dirVec(d);
   if (vx === 0 && vy === 0) { rbox(cx - 1, cy - 1, cx + 1, cy + 1, c, c); return; }
@@ -137,7 +125,6 @@ function arrow(cx, cy, d, r, c) {
   gui.line(cx - vx * r, cy - vy * r, tx, ty, c);
   if (vx === 0 || vy === 0) gui.line(cx - vx * r + vy, cy - vy * r + vx, tx + vy, ty + vx, c);
   const h = Math.max(2, r - 1);
-  // Arrowhead: the two directions 45 degrees either side of pointing back.
   const back = [[-vx - vy, -vy + vx], [-vx + vy, -vy - vx]];
   for (const [bx, by] of back) {
     const n = Math.max(Math.abs(bx), Math.abs(by));
@@ -149,7 +136,6 @@ function arrow(cx, cy, d, r, c) {
 const SHORT = { skipped_step: "SKIPPED", too_slow: "TOO SLOW", early_button: "EARLY", late_button: "LATE",
   cancelled: "CANCELLED", missing_step: "INCOMPLETE", other_move: "OTHER MOVE", not_allowed: "REFUSED" };
 
-// The step the miss is about, and a 2-4 word reason with directions and buttons as icons.
 function reason(a) {
   if (a.ok) return { parts: [`${a.total}F  (MIN ${a.minimum}F)`] };
   const t = a.trace, code = a.error.code;
@@ -166,9 +152,6 @@ function reason(a) {
   return { parts: [SHORT[code] || code], step: k };
 }
 
-// A box with the game HUD's bevelled corners: the border steps in one pixel per row for R rows
-// (3, as on the HUD's frames), or less when the box is too small. Built from gui.line only, so it
-// ports to Lua as is.
 const RADIUS = 3;
 function rbox(x1, y1, x2, y2, fill, outline) {
   if (outline === undefined) outline = fill;
@@ -191,9 +174,6 @@ function rbox(x1, y1, x2, y2, fill, outline) {
   }
 }
 
-// Neutral (stick at rest), in the style of Fightcade's arrows: a white ball with a black outline
-// and a grey inner shadow on its lower right. Hand-drawn at the two sizes used: 9 in slots, 7 in
-// played inputs. "#" black, "W" white, "S" shadow.
 const NEUTRAL = {
   9: [
     "..#####..",
@@ -223,10 +203,6 @@ function neutralIcon(x, y, size) {
   });
 }
 
-// A 9x9 pixel star, outlined in black so it reads over the box edge.
-// "#" gold. Placed so the box border runs into the right leg, never between the legs.
-// The sparkle for CLEAN and FRAME-PERFECT, a bigger cousin of the pearls' gold plus. "H" highlight,
-// "Y" gold, "S" shadow.
 const STAR = [
   "....H....",
   "....H....",
@@ -238,7 +214,6 @@ const STAR = [
   "....S....",
   "....S....",
 ];
-// "H" highlight, "Y" gold, "S" shadow; the outline is drawn round it in black.
 function star(x, y) {
   const colour = { H: 0xFFF2A8FF, Y: COL.gold, S: 0xD9921EFF };
   const body = (i, j) => STAR[j] !== undefined && colour[STAR[j][i]] !== undefined;
@@ -251,8 +226,6 @@ function star(x, y) {
   });
 }
 
-// A bevelled box outline drawn every other pixel: something optional. Each edge and corner
-// diagonal is stepped separately, so the dashes follow the bevel.
 function dashed(x1, y1, x2, y2, c) {
   const r = Math.max(0, Math.min(RADIUS, Math.floor((x2 - x1) / 2), Math.floor((y2 - y1) / 2)));
   const segment = (ax, ay, bx, by) => {
@@ -271,15 +244,8 @@ function dashed(x1, y1, x2, y2, c) {
   }
 }
 
-// An input is safe when it used at most half its window (5 of 10, 2 of 5).
 const safeUse = (used, window) => used <= Math.floor(window / 2);
 
-// "used/allowed" over a square bar spanning the column (left .. left + width). The bar covers the
-// window, or window plus overrun when late, with a notch where the window ends and a tick at its
-// half. Fill: green while safe, orange past half the window, red past the end. Gold is kept for
-// achievements (the star, CLEAN, FRAME-PERFECT).
-// `used` null: the part never happened. The bar still shows how many frames it allows, empty,
-// under "-/10" or under `text` when given (CANCELLED).
 function meter(x, y, used, window, left, width, text) {
   if (used === null) {
     const label = text || `-/${window}`;
@@ -302,7 +268,6 @@ function meter(x, y, used, window, left, width, text) {
   }
 }
 
-// Draws a run of text and icons on one line, returning the x after it. Icons are 9 px.
 function partsWidth(parts) {
   return parts.reduce((w, p) => w + (typeof p === "string" ? 4 * p.length : 10), 0);
 }
@@ -316,7 +281,6 @@ function inline(x, y, parts, color) {
   return x;
 }
 
-// "236+P" -> arrows and a fist. "P" and "K" (any strength) use the light button's icon.
 function notationParts(notation) {
   const parts = [];
   for (const m of notation.matchAll(/(360|720)|(\d)|\+?(PP|KK|P|K)(?![a-z])|([^\d+]+|\+)/g)) {
@@ -328,14 +292,9 @@ function notationParts(notation) {
   return parts;
 }
 
-// Splits the played frames into one group per column: each frame belongs to the first step at or
-// after it that the player reached (accepted, or seen late), and the counted button press to the
-// button column. Steps never reached get no frames, which is what makes a skip visible.
 function columns(a) {
   const t = a.trace, n = t.frames.length;
   const reach = t.steps.map(s => s.at);
-  // Steps not accepted but played anyway (a late diagonal, the 6 after a skip): their first
-  // arrival after the previous reached step.
   let last = reach[0] || 0;
   t.steps.forEach((s, k) => {
     if (reach[k] === undefined && k > 0) {
@@ -348,21 +307,15 @@ function columns(a) {
   const cols = t.steps.map(() => []);
   const buttonCol = [];
   const first = reach[0] !== undefined ? reach[0] : 1;
-  // Step 1 shows the hold that it matched. A "then let go" step is accepted on the release, so the
-  // hold of its own direction before that is shown too.
   let start1 = first;
   while (start1 > 1 && t.frames[start1 - 2].dir === t.frames[first - 1].dir) start1--;
   if (t.steps[0] && t.steps[0].release) {
     const d = Number(t.steps[0].label.replace("~", ""));
     while (start1 > 1 && t.frames[start1 - 2].dir === d) start1--;
   }
-  // An early button is shown where it was pressed, and the motion is followed to its end.
   const early = t.complete_at !== undefined && t.complete_at !== null && t.button_at < t.complete_at;
-  // Moves without a button (a dash) end where the motion completed or fell apart.
   const end = t.button_at === undefined || t.button_at === null ? n : early ? t.complete_at : t.button_at;
   for (let f = start1; f <= Math.min(n, end); f++) {
-    // The step frame f satisfied (the last of them when one frame satisfies several, as 6 let go
-    // straight into 2), or the next step to come.
     let k = -1;
     for (let j = 0; j < reach.length; j++) {
       if (reach[j] === f) k = j;
@@ -372,16 +325,12 @@ function columns(a) {
     if (early && k >= 0) {
       cols[k].push(frame);
     } else if (f === t.button_at) {
-      // The press, with the direction held on that frame unless a step was accepted on it
-      // (the optional last 6 of a super pressed together with the punch shows as 6+P).
       const stepHere = k >= 0 && reach[k] === f;
       buttonCol.push({ dir: stepHere ? 0 : frame.dir, press: frame.press });
       if (stepHere) cols[k].push({ dir: frame.dir, press: "" });
     } else if (k >= 0) cols[k].push(frame);
     else buttonCol.push({ dir: frame.dir, press: frame.press });
   }
-  // Each column after the first starts where the player left the previous accepted input: still
-  // holding it is implied by the meter, so only new inputs are shown.
   const leftover = (frames, dir) => {
     let i = 0;
     while (i < frames.length && frames[i].dir === dir && !frames[i].press) i++;
@@ -396,7 +345,6 @@ function columns(a) {
   return { reach, cols, buttonCol: trimmedButton };
 }
 
-// Consecutive equal frames as runs { dir, press, n }.
 function runsOf(frames) {
   const runs = [];
   for (const f of frames) {
@@ -407,7 +355,6 @@ function runsOf(frames) {
   return runs;
 }
 
-// Frames held are only shown where no meter says it already: the START column.
 const COUNT_W = r => (r.counted && r.dir && r.n > 1 ? 4 * String(r.n).length + 1 : 0);
 const RUN_W = r => (r.dir ? 10 : 0) + COUNT_W(r) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
 
@@ -421,7 +368,6 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
     if (r.dir === 5) neutralIcon(ix + 1, y + 1, 7);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
-    // Frames held, right after the direction it belongs to.
     if (COUNT_W(r)) { gui.text(ix, y + 2, String(r.n), color); ix += COUNT_W(r); }
     for (const b of (r.press.match(/[LMH][PK]/g) || [])) { gui.image(ix, y, b, 9, 9); ix += 10; }
     x += widths[i] + 3;
@@ -431,21 +377,15 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
 
 function drawLane(a, opt) {
   const t = a.trace;
-  // Bottom: the card ends at y 197, so the pearls (3 px below it) leave the same 3 px above the
-  // game's bottom HUD, which starts at y 209.
   const y0 = opt.position === "top" ? 56 : opt.position === "middle" ? 104 : 145;
   const height = 52, tabH = 11;
-  // The card always leaves room for Fightcade's input display, shown or not, so it never moves.
   if (opt.history === "on") fightcadeInputs(a);
   const avoid = [{ x1: 0, y1: 60, x2: 40, y2: 190 }];
   const fit = panelFit(y0 - tabH, y0 + height, avoid);
   const x0 = fit.x1;
   const ok = a.ok;
   const r = reason(a);
-  // Frame-perfect: every direction 1 frame after the last and the button on the frame the
-  // motion completes, so the total is the fastest possible.
   const perfect = ok && a.total === a.minimum;
-  // Clean: every timed input used at most half its window. Earns the star.
   const safe = ok && t.steps.every((st, k) => !st.window || k === 0 || st.at === undefined || t.steps[k - 1].at === undefined ||
     safeUse(st.at - t.steps[k - 1].at, st.window)) &&
     (t.complete_at === undefined || t.complete_at === null || safeUse(t.button_at - t.complete_at, t.button_window));
@@ -453,8 +393,6 @@ function drawLane(a, opt) {
 
   const { reach, cols, buttonCol } = columns(a);
   const gx = x0 + 5;
-  // Each column is exactly as wide as its widest content: the slot (15 px, plus 16 per optional
-  // direction), what was played, the meter (label and bar) or START. Columns sit GAP apart.
   const PAD = 4, GAP = 8;
   const colW = k => {
     const isButton = k === t.steps.length;
@@ -474,9 +412,7 @@ function drawLane(a, opt) {
   for (let k = 0; k <= lastCol; k++) gridW += colW(k) + (k > 0 ? GAP : 0);
   const x1 = Math.min(fit.x2, x0 + PAD + gridW + PAD);
 
-  // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
-  // A targeted move is marked with a crosshair in front of its name.
   const nameX = opt.target ? x0 + 1 + 4 * 7 : x0 + 1;
   if (opt.target) gui.text(x0 + 1, y0 - tabH + 2, "TARGET", COL.dim);
   gui.text(nameX, y0 - tabH + 2, name, COL.text);
@@ -484,12 +420,9 @@ function drawLane(a, opt) {
   const tx = inline(nameX + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.bad);
   if (safe && !perfect) inline(tx + 6, y0 - tabH + 2, r.parts, COL.dim);
 
-  // The box, tinted with the verdict.
   rbox(x0, y0, x1, y0 + height, COL.panel, verdict);
   rbox(x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, (verdict & 0xFFFFFF00) | 0x28, (verdict & 0xFFFFFF00) | 0x28);
 
-  // Right: one column per step plus the button. Row 1 what was needed, row 2 what you did in
-  // that column's time, row 3 the timing meter.
   const ny = y0 + 11, ry = y0 + 23, my = y0 + 37;
   let cx = gx;
   for (let k = 0; k <= lastCol; k++) {
@@ -497,9 +430,7 @@ function drawLane(a, opt) {
     if (cx + w > x1 - 2) break;
     if (k > 0) gui.line(cx - GAP / 2, y0 + PAD, cx - GAP / 2, y0 + height - PAD, 0xFFFFFF18);
     if (k === t.steps.length) {
-      // The button column.
       const c = ok ? COL.good : (r.button ? COL.bad : COL.button);
-      // Optional directions (the last 6 of 236236+P) sit before the button in dashed boxes.
       const opt = t.optional || [];
       let bx = mid + opt.length * 8;
       opt.forEach((d, i) => {
@@ -525,14 +456,12 @@ function drawLane(a, opt) {
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
       rbox(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       if (d === 5) neutralIcon(mid - 4, ny - 4, 9); else if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
-      // "Then let go": a small neutral ball on the slot's lower-right corner.
       if (s.release) neutralIcon(mid + 3, ny + 2, 7);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);
         gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);
       }
       const runs = runsOf(cols[k]);
-      // The input that broke the attempt, marked red: the up that cancelled the motion.
       const culprit = run =>
         (missed && a.error.code === "cancelled" && run.dir === 8) ||
         (a.error && a.error.code === "early_button" && run.press !== "");
@@ -540,14 +469,12 @@ function drawLane(a, opt) {
       if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
       else if (reach[k] === undefined) gui.text(mid - 6, ry + 1, "---", COL.bad);
       if (k === 0) {
-        // The first input has no timing: nothing comes before it.
       } else if (missed && a.error.code === "cancelled") meter(mid, my, null, s.window, cx, w, "CANCELLED");
       else if (s.window && prev !== undefined && reach[k] !== undefined) meter(mid, my, reach[k] - prev, s.window, cx, w);
       else if (s.window) meter(mid, my, null, s.window, cx, w);
     }
     cx += w + GAP;
   }
-  // On the corner, nudged 1 px in, so it sits over the bevel.
   if (safe) star(x1 - 5, y0 - 3);
   return { x0, x1, y0, y1: y0 + height };
 }
@@ -563,9 +490,6 @@ function isClean(a) {
   return steps && button;
 }
 
-// Recent attempts as floating pearls under the card (the last 12, oldest on the left). The outlined
-// one is shown; a new attempt, or stepping to the rightmost pearl, returns to the latest. A pearl is 5x5 with rounded corners: a black outline around its colour.
-// The one shown gets a rounded white outline.
 function pearl(x, y, c, size) {
   const n = size || 5, e = n - 1;
   gui.line(x + 1, y, x + e - 1, y, 0x000000FF);
@@ -577,8 +501,6 @@ function pearl(x, y, c, size) {
 
 const fade = c => (c & 0xFFFFFF00) | 0x70;
 
-// Clean and frame-perfect pearls stay green and add the star's gold: a gold plus with a black
-// outline on the pearl's top-right corner. Frame-perfect pearls are all gold.
 function goldPlus(cx, cy) {
   const cells = [[0, -1], [-1, 0], [0, 0], [1, 0], [0, 1]];
   const isPlus = (dx, dy) => cells.some(([a, b]) => a === dx && b === dy);
@@ -589,10 +511,8 @@ function goldPlus(cx, cy) {
   for (const [dx, dy] of cells) gui.pixel(cx + dx, cy + dy, COL.gold);
 }
 
-// Draws one pearl of a kind at (x, y), size n (5 normal, 7 selected).
 function drawPearl(kind, x, y, n) {
   const c = kind === "missed" ? COL.bad : COL.good;
-  // Frame-perfect is rare enough to be all gold, at the normal size, with the same plus.
   if (kind === "perfect") {
     pearl(x, y, COL.gold, n);
     goldPlus(x + n - 1, y);
@@ -602,7 +522,6 @@ function drawPearl(kind, x, y, n) {
   if (kind === "clean") goldPlus(x + n - 1, y);
 }
 
-// A soft oval shadow, 5 px wide, under a lifted pearl.
 function liftShadow(x, y) {
   gui.pixel(x, y, 0x00000068);
   gui.line(x + 1, y, x + 3, y, 0x000000B0);
@@ -616,7 +535,6 @@ function pearlKind(a) {
   return isClean(a) ? "clean" : "out";
 }
 
-// The pearl story: every state, normal and selected (bigger), on the game.
 function drawPearlStory() {
   const kinds = ["missed", "out", "clean", "perfect"];
   const labels = ["MISSED", "OUT", "CLEAN", "FRAME-PERFECT"];
@@ -632,8 +550,6 @@ function drawPearlStory() {
   });
 }
 
-// Ways to mark the pearl shown, to compare in the mock: bigger, a caret under it, the others
-// dimmed, or bigger with the others dimmed.
 function drawHistory(box, attempts, shown, style) {
   const first = Math.max(0, Math.min(shown - 6, attempts.length - 12));
   const visible = attempts.slice(first, first + 12);
@@ -650,7 +566,6 @@ function drawHistory(box, attempts, shown, style) {
     if (dim && !isShown && a) {
       pearl(x, y, c, 5);
     } else if (big && isShown) {
-      // Lifted: a soft oval shadow just under it.
       liftShadow(x, y + 5);
       drawPearl(k, x - 1, y - 1, 7);
     } else {
@@ -664,9 +579,6 @@ function drawHistory(box, attempts, shown, style) {
   });
 }
 
-// The target picker (Alt+8). Specials and super arts first, then the moves without a button
-// (dashes, jumps, parries), which are graded only while targeted. Duplicates are merged and only
-// real notation is drawn as icons. Scrolls to keep the selection in view.
 function pickerRows(moves) {
   const seen = new Set(), main = [], other = [];
   for (const m of moves) {
@@ -683,8 +595,6 @@ function drawPicker(moves, selected) {
   const rows = pickerRows(moves);
   const selectable = rows.filter(r => !r.divider);
   const selRow = rows.indexOf(selectable[Math.max(0, Math.min(selected, selectable.length - 1))]);
-  // The play area: clear of the input display (x 44), the top HUD and portraits (y 36, x 340) and
-  // the bottom HUD (y 209).
   const VISIBLE = 14, rowH = 11, x0 = 44, y0 = 36, width = 296;
   const first = Math.max(0, Math.min(selRow - 6, rows.length - VISIBLE));
   const shown = rows.slice(first, first + VISIBLE);
@@ -707,7 +617,6 @@ function drawPicker(moves, selected) {
   if (first + VISIBLE < rows.length) gui.text(x0 + width / 2 - 4, y0 + height - 4, "...", COL.dim);
 }
 
-// ---- Page controls ----
 const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null, pearlStyle: "bigger+dim", mark: "spark", story: false };
 function render() {
   const cv = document.getElementById("screen");
@@ -721,7 +630,6 @@ function render() {
     return;
   }
   const sc = SCENARIOS[state.scenario];
-  // The picker replaces the card and pearls while it is open.
   if (!state.picker) {
     const box = drawLane(sc.attempt, Object.assign({}, state, { target: sc.target }));
     if (state.browse) drawHistory(box, SCENARIOS.map(x => x.attempt), state.scenario, state.pearlStyle);
@@ -753,7 +661,6 @@ for (const k of ["browse", "picker", "story"]) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";
   b.onclick = () => { state[k] = !state[k]; render(); }; tg.appendChild(b);
 }
-// Page Up / Page Down browse attempts; arrow keys move the picker selection.
 document.addEventListener("keydown", e => {
   if (e.key === "PageUp" && state.scenario > 0) { state.scenario--; state.pick = null; }
   else if (e.key === "PageDown" && state.scenario < SCENARIOS.length - 1) { state.scenario++; state.pick = null; }

@@ -1,14 +1,8 @@
--- The target picker, ported from design/overlay-mock.html (drawPicker): every move of the
--- character, specials and super arts first, then moves without a button (dashes, parries) that
--- are graded only while targeted. It fills the play area and scrolls to keep the selection seen.
-
 local draw = require("input_grader.core.draw")
 
 local COL = draw.COL
 local M = {}
 
--- The play area: clear of the input display on the left, the portraits and top HUD, and the
--- bottom HUD.
 M.X0, M.Y0, M.WIDTH, M.VISIBLE, M.ROW_H = 44, 36, 296, 14, 11
 
 local function is_notation(s)

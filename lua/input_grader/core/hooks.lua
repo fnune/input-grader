@@ -1,7 +1,3 @@
--- Lets several scripts share an emulator whose Lua API keeps one callback per hook (FBNeo and
--- FBA-RR: a second emu.registerafter replaces the first). install() wraps the registration
--- functions so every callback registered afterwards runs, in registration order.
-
 local M = {}
 
 local MULTI = {

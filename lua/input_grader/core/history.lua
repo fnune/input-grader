@@ -1,5 +1,3 @@
--- A fixed-size history of per-frame input records, indexed by an increasing frame number.
-
 local History = {}
 History.__index = History
 

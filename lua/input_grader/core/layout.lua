@@ -1,12 +1,8 @@
--- Fits the overlay panel beside areas another script draws on (another overlay's input
--- history column, for example). Pure: rectangles in, panel geometry out.
-
 local M = {}
 
 M.SCREEN_W = 384
 M.MARGIN = 8
 M.GAP = 4
--- Below this width the panel drops its name column and per-frame row.
 M.COMPACT_BELOW = 300
 
 local function overlaps(y1, y2, r)

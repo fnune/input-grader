@@ -1,7 +1,3 @@
--- Reads 3rd Strike's player and command state from emulator memory (Japan 990512 set, the one
--- Fightcade runs). Addresses come from the arcade decomp's struct layouts, located in RAM with
--- harness/mame (see docs/how-it-works.md); the player object offsets are 3rd_training_lua's.
-
 local bits = require("input_grader.core.bits")
 local C = require("input_grader.games.sfiii3.constants")
 
@@ -12,7 +8,7 @@ M.WAZA_WORK = { 0x020256C4, 0x02025CE4 }
 M.PLAYER = { 0x02068C6C, 0x02069104 }
 M.SELECTED_SA = { 0x020154D3, 0x020154D5 }
 M.WAZA_FLAG, M.WORK_SIZE = 0x16, 28
-M.MATCH_STATE, M.IN_MATCH = 0x020154A7, 2 -- 3rd_training_lua: 2 once a round accepts input
+M.MATCH_STATE, M.IN_MATCH = 0x020154A7, 2
 
 local Ram = {}
 Ram.__index = Ram
@@ -31,7 +27,6 @@ function Ram:fighter_row()
   return self.mem.u16(M.PLAYER[self.player] + M.PLAYER_NUMBER)
 end
 
--- PLW offsets, from offsetof() over the decomp's structs.h (tools/offsets.c).
 M.RL_FLAG, M.RL_WAZA, M.POS_Y = 0x0A, 0x0B, 0x68
 M.PLAYER_NUMBER, M.SA_STOP_FLAG, M.DO_NOT_MOVE = 0x3C0, 0x41C, 0x455
 
@@ -74,10 +69,8 @@ function Ram:read_input()
   return raw, { facing_right = self:facing_right(), airborne = self:airborne_at_check() }
 end
 
--- Each slot's w_ptr points at the next step of its record (24-byte header, 8-byte steps). An
--- idle slot points just past step 1, the smallest value w_ptr ever takes, so the smallest value
--- seen per slot is that slot's "waiting for step 1" address. No ROM address is needed, which
--- keeps this independent of the ROM revision and of whether the emulator lets Lua read ROM.
+local STEP_BYTES, STEP_AFTER_IDLE = 8, 2
+
 local function next_step_index(self, slot, w_ptr)
   local row = self:fighter_row()
   if self.calibrated_row ~= row then
@@ -88,7 +81,7 @@ local function next_step_index(self, slot, w_ptr)
     idle = w_ptr
     self.idle_ptr[slot] = idle
   end
-  return math.floor((w_ptr - idle) / 8) + 2
+  return math.floor((w_ptr - idle) / STEP_BYTES) + STEP_AFTER_IDLE
 end
 
 --- Every command slot's state: waza_flag and the WAZA_WORK fields, with w_ptr turned into the

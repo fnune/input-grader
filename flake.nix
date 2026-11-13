@@ -14,8 +14,6 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAll = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      # MAME as a pinned test bench. The host's LD_LIBRARY_PATH can leak libraries built
-      # against another glibc into it, so every launcher clears it.
       mameRun = pkgs: name: script: pkgs.writeShellApplication {
         inherit name;
         runtimeInputs = [ pkgs.mame pkgs.python3 ];
@@ -60,7 +58,6 @@
           app = drv: { type = "app"; program = pkgs.lib.getExe drv; };
         in
         {
-          # Unit tests on LuaJIT (the Lua 5.1 that FBNeo embeds) and on Lua 5.4.
           test = app (pkgs.writeShellApplication {
             name = "test";
             runtimeInputs = [ pkgs.luajit pkgs.lua5_4 ];
@@ -87,7 +84,6 @@
             text = ''python3 -I tools/check_roms.py roms "$@"'';
           });
 
-          # Regenerate the command tables from the ROM, labelled and cross-checked by the decomp.
           gen = app (pkgs.writeShellApplication {
             name = "gen";
             runtimeInputs = [ pkgs.python3 pkgs.gcc ];

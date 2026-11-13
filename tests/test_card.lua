@@ -11,7 +11,6 @@ local T = require("helpers")
 
 local COL = draw.COL
 
--- A canvas that records what was drawn.
 local function canvas()
   local c = { texts = {}, icons = {}, boxes = 0, lines = {}, pixels = 0 }
   function c:text(_, _, s, colour)
@@ -49,7 +48,6 @@ local function canvas()
   return c
 end
 
--- Real grader output for a script played by `row` (Ryu by default).
 local function attempt(script, opts)
   opts = opts or {}
   local row = opts.row or 2

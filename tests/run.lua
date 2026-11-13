@@ -1,4 +1,3 @@
--- Minimal test runner: `lua tests/run.lua` from the repo root, any Lua 5.1+ or LuaJIT.
 package.path = "lua/?.lua;lua/?/init.lua;tests/?.lua;" .. package.path
 
 local files = {
@@ -10,6 +9,7 @@ local files = {
   "test_launcher",
   "test_layout",
   "test_intent",
+  "test_run",
 }
 
 local passed, failed = 0, {}

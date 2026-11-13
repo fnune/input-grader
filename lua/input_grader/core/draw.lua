@@ -1,9 +1,3 @@
--- Drawing primitives for the overlay, ported from design/overlay-mock.html. They draw through a
--- canvas port, so they run on any emulator:
---   canvas:pixel(x, y, rgba)   canvas:line(x1, y1, x2, y2, rgba)   canvas:box(x1, y1, x2, y2, fill, outline)
---   canvas:text(x, y, s, rgba)  canvas:icon(key, x, y, size) -> true if drawn
--- Colours are 0xRRGGBBAA. Icon keys: "l", "r", "u", "d", "ul", "ur", "dl", "dr", "LP" .. "HK".
-
 local M = {}
 
 M.COL = {
@@ -32,7 +26,6 @@ function M.alpha(c, a)
   return c - c % 256 + a
 end
 
---- Numpad digit to the icon sheet's absolute direction, for a player facing right.
 local DIR_KEYS = { [1] = "dl", [2] = "d", [3] = "dr", [4] = "l", [6] = "r", [7] = "ul", [8] = "u", [9] = "ur" }
 function M.dir_key(d)
   return DIR_KEYS[d]
@@ -42,7 +35,6 @@ local function dir_vec(d)
   return ((d - 1) % 3) - 1, -(math.floor((d - 1) / 3) - 1)
 end
 
--- An arrow drawn with lines, for when the emulator has no icon sheet.
 local function arrow(canvas, cx, cy, d, r, c)
   local vx, vy = dir_vec(d)
   local tx, ty = cx + vx * r, cy + vy * r
@@ -130,8 +122,6 @@ local function sprite(canvas, x, y, rows, colours)
   end
 end
 
--- Neutral (stick at rest), in the style of Fightcade's arrows: white, black outline, a thin grey
--- shadow inside the lower right. 9 px in slots, 7 px in played inputs.
 local NEUTRAL = {
   [9] = {
     "..#####..",
@@ -160,7 +150,6 @@ function M.neutral(canvas, x, y, size)
   sprite(canvas, x, y, NEUTRAL[size], NEUTRAL_COLOURS)
 end
 
--- The sparkle for CLEAN and FRAME-PERFECT: "H" highlight, "Y" gold, "S" shadow, outlined in black.
 local STAR = {
   "....H....",
   "....H....",
@@ -193,7 +182,6 @@ function M.star(canvas, x, y)
   sprite(canvas, x, y, STAR, STAR_COLOURS)
 end
 
--- A gold plus with a black outline, centred on (cx, cy): the pearls' version of the star.
 local PLUS = { ".#.", "###", ".#." }
 local PLUS_COLOURS = { ["#"] = COL.gold }
 function M.gold_plus(canvas, cx, cy)

@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""Check the ROM archives in a folder against roms.sha1 and name the 3rd Strike sets present.
-
-Usage: check_roms.py <roms dir> [required set]
-
-Archives are matched by the SHA-1 of the files inside them, so how they were zipped does not
-matter. With a required set (for example sfiii3n), exits non-zero unless all its files are there.
-"""
 import hashlib
 import sys
 import zipfile

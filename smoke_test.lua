@@ -1,10 +1,3 @@
--- Smoke test for running inside Fightcade's FBNeo. Load it with Game > Lua Scripting > New Lua
--- Script Window > Browse > smoke_test.lua > Run, during a 3rd Strike match. It checks the risky
--- parts of the overlay one by one, shows a checklist on screen, and writes logs/smoke-test.txt.
---
--- Standalone on purpose (no requires): a failure in one check cannot hide the others.
--- Steps for the person running it are on screen; see also docs/smoke-test.md.
-
 local results, order = {}, {}
 local write_log
 local lines_out = {}
@@ -36,9 +29,6 @@ write_log = function()
   f:close()
 end
 
--- 1. Environment --------------------------------------------------------------------------------
-
--- Fightcade's FBNeo ships gd as a module (gd.dll next to the emulator), not as a global.
 local gd_ok, gd = pcall(require, "gd")
 if not gd_ok then
   gd = nil
@@ -65,8 +55,6 @@ check("write logs/", function()
   return "logs/ is writable"
 end)
 
--- 2. Memory reads (3rd Strike Japan 990512) -------------------------------------------------------
-
 local P1 = 0x02068C6C
 check("memory", function()
   local row = memory.readword(P1 + 0x3C0)
@@ -76,9 +64,6 @@ end)
 
 local reported_match = false
 
--- 3. Fightcade's icon sheet through gd ------------------------------------------------------------
-
--- Where Fightcade's training mode may be, as seen from its FBNeo under Wine (Z: is /).
 local SHEET = "inputs\\scrolling-input\\icons-capcom-32.png"
 local EMULATOR = "Z:\\app\\fightcade\\Fightcade\\emulator\\fbneo\\"
 local SHEET_PATHS = {
@@ -88,7 +73,6 @@ local SHEET_PATHS = {
   "../fbneo-training-mode/inputs/scrolling-input/icons-capcom-32.png",
   "fbneo-training-mode/inputs/scrolling-input/icons-capcom-32.png",
 }
--- A blank 32x32 transparent PNG to resample icons into (generated for this project).
 local BLANK_HEX = "89504E470D0A1A0A0000000D494844520000002000000020010300000049B4E8B700000003504C5445000000A77A3DDA00"
   .. "00000174524E530040E6D8660000000C4944415478DA636018DC000000A000018EFBB1B40000000049454E44AE426082"
 local function hex_to_string(hex)
@@ -116,8 +100,6 @@ check("icon sheet", function()
   end
   return false
 end)
-
--- 4. Drawing speed ---------------------------------------------------------------------------------
 
 local GREEN, RED, GOLD, PANEL = 0x4CD964FF, 0xFF5A5AFF, 0xFFD23CFF, 0x101018C8
 
@@ -159,7 +141,6 @@ local function neutral(x, y)
   end
 end
 
--- A sample card like the mock's: four slots, played inputs, meters.
 local function sample_card()
   local x0, y0 = 48, 148
   gui.text(x0 + 1, y0 - 9, "HADOKEN  SMOKE TEST", 0xFFFFFFFF)
@@ -189,15 +170,11 @@ check("draw speed", function()
   return string.format("%.2f ms per card (a frame is 16.7 ms)", draw_ms)
 end)
 
--- 5. Inputs, hotkeys and a menu that blocks the character -----------------------------------------
-
 local seen_joypad, seen_keys = {}, {}
 local menu_open, menu_sel, menu_frozen_frames = false, 1, 0
 local prev, prev_m = {}, false
 local MENU = { "HADOKEN", "SHORYUKEN", "TATSUMAKI", "FORWARD DASH" }
 
--- FBNeo's Lua hotkeys are game inputs the player must map (Input > Map game inputs > Lua Hotkey
--- 6); nothing is mapped by default. The M key, read directly, works without any mapping.
 local function toggle_menu(source)
   menu_open = not menu_open
   check("menu toggle", function()
@@ -208,14 +185,11 @@ input.registerhotkey(6, function()
   toggle_menu("Lua Hotkey 6")
 end)
 
--- The player's real controls this frame, read before they are blocked: once joypad.set has
--- cleared them, joypad.get returns the cleared values too.
 local live_pad = {}
 
 emu.registerbefore(function()
   live_pad = joypad.get()
   if menu_open then
-    -- Block P1's controls so the character stands still while the stick moves the menu.
     local blocked = {}
     for name in pairs(live_pad) do
       if name:sub(1, 3) == "P1 " then
@@ -293,8 +267,6 @@ emu.registerafter(function()
   end
   prev = pad
 end)
-
--- 6. On-screen checklist ---------------------------------------------------------------------------
 
 gui.register(function()
   sample_card()

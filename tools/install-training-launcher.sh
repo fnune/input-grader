@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Write 3rd_training_with_grader.lua into a 3rd_training_lua folder, so Fightcade can run the
-# training script and the input grader together. Usage:
-#   tools/install-training-launcher.sh <3rd_training_lua dir> [--windows-path]
-# --windows-path writes this repo's path as Z:\... (Fightcade on Linux runs FBNeo under Wine;
-# the default unix path works too when the training folder is on the same Wine drive).
 set -euo pipefail
 
 training_dir=${1:?usage: $0 <3rd_training_lua dir> [--windows-path]}

@@ -5,8 +5,6 @@ local T = require("helpers")
 local RYU = 2
 local HADOKEN, SHORYUKEN, TATSU, SA1 = 29, 28, 30, 20
 
--- Run a script through Ryu's checker and report the frame (1-based) on which the move would
--- start, given a button in the script.
 local function starts(script, opts)
   opts = opts or {}
   local checker = Checker.new(T.fighter(RYU))

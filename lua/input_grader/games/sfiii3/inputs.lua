@@ -1,5 +1,3 @@
--- Conversions between numpad notation and the game's input words.
-
 local bits = require("input_grader.core.bits")
 local C = require("input_grader.games.sfiii3.constants")
 
@@ -10,7 +8,6 @@ local M = {}
 M.BUTTONS = { LP = C.SW_LP, MP = C.SW_MP, HP = C.SW_HP, LK = C.SW_LK, MK = C.SW_MK, HK = C.SW_HK }
 M.BUTTON_ORDER = { "LP", "MP", "HP", "LK", "MK", "HK" }
 
--- Numpad digit to relative lever bits (up 1, down 2, forward 4, back 8).
 local RELATIVE = {
   [1] = C.LV_DOWN + C.LV_BACK,
   [2] = C.LV_DOWN,

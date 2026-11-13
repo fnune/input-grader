@@ -1,10 +1,3 @@
--- Turns the game's per-frame command state into motion "runs": for each slot, when each step
--- matched, when the motion completed, and when and why it was abandoned. The state can come
--- from RAM (live) or from the Lua checker (tests), since both expose waza_flag and WAZA_WORK.
---
--- Frames are counted in check frames: frames where the game ran the command check. That is the
--- clock the game's windows use, so frozen frames (super freeze) do not count against the player.
-
 local Tracker = {}
 Tracker.__index = Tracker
 
@@ -65,10 +58,6 @@ function Tracker:update(state, dead, started)
     local run = current_run(self, slot)
     local open = run and not run.done
 
-    -- command_ok sets the flag to `reset` and command_ok_move decrements it in the same frame,
-    -- so a completion shows as a rising flag.
-    -- A move that starts in the frame its motion completes is cleared (waza_compel_init) before
-    -- RAM can show the flag, so the start itself marks the completion.
     local completed = flag > before_flag or (started == slot and before_flag <= 0)
     if completed then
       if not open or before_p == 0 then

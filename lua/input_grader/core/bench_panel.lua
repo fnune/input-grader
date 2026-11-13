@@ -1,7 +1,3 @@
--- The bench result: per move, successes out of attempts, the rate per facing, the most common
--- mistake and the median margin, in a panel over the play area. While the bench runs, a one-line
--- counter sits above the card instead.
-
 local draw = require("input_grader.core.draw")
 
 local COL = draw.COL

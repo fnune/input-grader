@@ -1,10 +1,5 @@
--- FBNeo (and Fightcade's fcadefbneo) adapter: the emulator's Lua 5.1 API behind the interface
--- core/run.lua and the game modules use. `env` is injectable so the adapter can be tested with
--- fakes; `env.require` loads gd.
-
 local M = {}
 
--- P1's controls as FBNeo names them for 3rd Strike, and the app's names for them.
 local PAD = {
   up = "P1 Up",
   down = "P1 Down",
@@ -18,17 +13,11 @@ local PAD = {
   HK = "P1 Strong Kick",
 }
 
--- Fightcade training mode's icon sheet (fbneo-training-mode, inputs/scrolling-input), read from
--- the user's Fightcade install: 32 px cells in one column, in this order.
 local SHEET_ROWS =
   { l = 0, r = 1, u = 2, d = 3, ul = 4, ur = 5, dl = 6, dr = 7, LP = 8, MP = 9, HP = 10, LK = 11, MK = 12, HK = 13 }
 local SHEET_FILE = "inputs\\scrolling-input\\icons-capcom-32.png"
 
--- Folders that may hold Fightcade's training mode. On Windows, Lua 5.1 expands "!" in
--- package.cpath to the emulator's own folder (that is how require "gd" finds gd.dll), and the
--- training mode sits next to the emulator, wherever Fightcade is installed. The Flatpak's Wine
--- view is a fallback for when that lookup finds nothing.
-local function sheet_dirs(env)
+function M.sheet_dirs(env)
   local dirs = {}
   for entry in ((env.package and env.package.cpath) or ""):gmatch("[^;]+") do
     local dir = entry:match("^(.*[\\/])%?%.dll$")
@@ -45,7 +34,6 @@ local function sheet_dirs(env)
   return dirs
 end
 
--- A blank 32x32 transparent PNG to resample icons into (generated for this project).
 local BLANK_HEX = "89504E470D0A1A0A0000000D494844520000002000000020010300000049B4E8B700000003504C5445000000A77A3DDA00"
   .. "00000174524E530040E6D8660000000C4944415478DA636018DC000000A000018EFBB1B40000000049454E44AE426082"
 
@@ -55,15 +43,13 @@ local function hex_to_string(hex)
   end))
 end
 
--- Loads the icon sheet and returns fn(key, size) -> gdStr (cached), or nil when gd or the sheet
--- is missing; the overlay then draws its icons with lines.
 local function icon_loader(env)
   local ok, gd = pcall(env.require or require, "gd")
   if not ok or type(gd) ~= "table" then
     return nil
   end
   local sheet
-  for _, dir in ipairs(sheet_dirs(env)) do
+  for _, dir in ipairs(M.sheet_dirs(env)) do
     local f = env.io.open(dir .. SHEET_FILE, "rb")
     if f then
       f:close()
@@ -132,8 +118,6 @@ function M.new(env)
     end,
   }
 
-  -- The player's real controls this frame, read before blocking: once joypad.set has cleared
-  -- them, joypad.get returns the cleared values.
   local live = {}
   function p.pad()
     live = joypad.get()
@@ -168,7 +152,6 @@ function M.new(env)
   function p.hotkey(n, fn)
     input.registerhotkey(n, fn)
   end
-  -- Emulated time: frames at 60 per second, so pauses and fast-forward behave.
   function p.clock()
     return emu.framecount() / 60
   end
@@ -179,7 +162,6 @@ function M.new(env)
     env.print(s)
   end
 
-  --- A function that appends a line to `path`, writing `header` first when the file is new.
   function p.appender(path, header)
     local existing = env.io.open(path, "r")
     if existing then

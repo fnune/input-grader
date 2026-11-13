@@ -1,6 +1,3 @@
--- Composition root of the 3rd Strike grader: wires the RAM source, the grader, the bench, the
--- log and the overlay for a platform (FBNeo, MAME).
-
 local App = require("input_grader.core.app")
 local Bench = require("input_grader.core.bench")
 local csv = require("input_grader.core.csv")
@@ -9,13 +6,8 @@ local sources = require("input_grader.games.sfiii3.sources")
 
 local M = {}
 
--- Japan 990512 is what Fightcade runs; 990608 is what harness/mame was validated on. Both have
--- the same command tables and RAM layout (docs/how-it-works.md).
 M.SUPPORTED = { sfiii3nr1 = true, sfiii3n = true }
 
--- Where Fightcade's training mode draws P1's input display at its defaults (13 rows of 10 px from
--- y 60, icons 12.86 px wide from x 12). The card always leaves this clear, so it never moves
--- when the display is toggled. Room for two icons per row (a direction and a button).
 M.FIGHTCADE_INPUT_DISPLAY = { x1 = 0, y1 = 60, x2 = 40, y2 = 190 }
 
 --- @param platform table see lua/input_grader/platform/fbneo.lua

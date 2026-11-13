@@ -1,8 +1,3 @@
--- Recent attempts as pearls under the card, ported from design/overlay-mock.html (drawHistory):
--- the last 12, oldest on the left. Red missed, green out; clean adds a gold plus on the corner,
--- frame-perfect is all gold with the plus. The pearl shown is bigger, lifted over a soft shadow,
--- and the others are dimmed.
-
 local card = require("input_grader.core.card")
 local draw = require("input_grader.core.draw")
 

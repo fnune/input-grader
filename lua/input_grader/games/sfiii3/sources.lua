@@ -1,9 +1,3 @@
--- Where the 3rd Strike grader gets each check frame from: the running game's RAM, or the Lua
--- checker (for tests and offline replays). Both return the same observation:
---   { raw, facing_right, airborne, sw_new, state = {flag, work}, started = {slot, strength}|nil,
---     fighter_row, super_art }
--- or nil when the game did not run the command check this frame.
-
 local C = require("input_grader.games.sfiii3.constants")
 local Checker = require("input_grader.games.sfiii3.checker")
 local ram = require("input_grader.games.sfiii3.ram")
@@ -90,8 +84,6 @@ function M.sim(commands, fighter_row, super_art)
   return self
 end
 
--- Frames after a move starts during which no other move may start. It stands in for the
--- recovery and the spent meter that stop the real game from starting a move twice.
 SimSource.BUSY_FRAMES = 30
 
 function SimSource:push(raw, facing_right, airborne)

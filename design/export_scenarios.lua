@@ -1,6 +1,3 @@
--- Writes design/scenarios.js: real grader output for scripted attempts, for the overlay mock.
--- Usage (repo root): lua design/export_scenarios.lua > design/scenarios.js
-
 package.path = "lua/?.lua;lua/?/init.lua;tests/?.lua;" .. package.path
 
 local Game = require("input_grader.games.sfiii3.game")

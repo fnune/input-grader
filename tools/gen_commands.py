@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""Generate lua/input_grader/games/sfiii3/commands.lua from the game's command tables.
-
-Usage: gen_commands.py <prog.bin> <sfIII3-cps3-decomp dir> <out .lua>
-
-The numbers come from the decrypted program ROM, so the output matches the game Fightcade
-runs. The decomp only contributes labels (fighter, move name, notation) and a cross-check:
-every record whose values differ between the ROM and the decomp is reported, and the ROM wins.
-"""
 import re
 import struct
 import subprocess
@@ -51,7 +43,6 @@ class Rom:
         steps, at = [], addr + 2 * HEAD_WORDS
         while self.s16(at) != CMD_END:
             if self.s16(at) == CK_NONE:
-                # Gill's super art slots end on a bare CK_NONE: a step that never completes.
                 return head, [[CK_NONE, 0, 0, 0]]
             steps.append([self.s16(at + 2 * i) for i in range(STEP_WORDS)])
             at += 2 * STEP_WORDS
@@ -61,8 +52,6 @@ class Rom:
 
 
 def locate_slot_table(rom):
-    # Ken and Akuma share the Hadoken's shape, so several records match: keep the one table
-    # base whose every slot points at a well-formed record.
     bases = set()
     for record in rom.find_all(words(RYU_HADOKEN)):
         for pointer in rom.find_all(struct.pack(">I", record)):
@@ -87,7 +76,6 @@ def is_slot_table(rom, base):
 
 
 def preprocess(decomp):
-    """Expand the decomp's macros so its record values can be compared with the ROM."""
     with tempfile.TemporaryDirectory() as stub:
         for name in ("types.h", "structs.h"):
             Path(stub, name).write_text("")
@@ -106,7 +94,7 @@ def preprocess(decomp):
 def eval_c(expr):
     expr = re.sub(r"\(\s*s16\s*\)", "", expr.strip())
     expr = expr.replace("|", " | ")
-    value = eval(expr, {"__builtins__": {}})  # noqa: S307  digits and C operators only, from cpp output
+    value = eval(expr, {"__builtins__": {}})  # noqa: S307
     return struct.unpack(">h", struct.pack(">H", value & 0xFFFF))[0]
 
 
@@ -124,7 +112,6 @@ def labels(decomp):
 
 
 def super_arts(decomp):
-    """super_arts_data (PLCNT_tbl.c): per fighter, the ground and air slot of each super art."""
     src = (decomp / "data/PLCNT_tbl.c").read_text()
     block = src[src.index("super_arts_data[24][4]"):]
     block = block[:block.index("\n};")]
@@ -139,7 +126,6 @@ def super_arts(decomp):
 
 
 def parse_label(comment):
-    """'Ryu: Hadoken, 236+P' -> ('Hadoken', '236+P'); shared records have no fighter prefix."""
     guess = "(?)" in comment
     text = comment.replace("(?)", "").strip()
     if ":" in text:
@@ -151,7 +137,6 @@ def parse_label(comment):
 
 
 def reachable(flat):
-    """The header and the steps up to the first CK_NONE, which never completes."""
     for i in range(HEAD_WORDS, len(flat), STEP_WORDS):
         if flat[i] == CK_NONE:
             return flat[:i + 1]

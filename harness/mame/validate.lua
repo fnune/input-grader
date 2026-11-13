@@ -1,10 +1,3 @@
--- Equivalence check of the Lua checker against the game, one frame transition at a time.
--- Each frame: load the game's command state from RAM into the checker, step the checker with
--- the input word the game read, and compare every field of all 56 slots with RAM.
---
--- mame sfiii3n -rompath roms -video none -sound none -nothrottle -autoboot_script harness/mame/validate.lua
--- Environment: VALIDATE_SEED (default 1), VALIDATE_REPS (default 400), VALIDATE_OUT (report path).
-
 package.path = "harness/mame/?.lua;lua/?.lua;" .. package.path
 
 local S = require("session")
@@ -107,8 +100,6 @@ S.spawn(function()
     return true
   end
 
-  -- Game code outside the command check clears slots: waza_compel_init reloads the first step
-  -- (a move starts, a jump starts or lands), waza_compel_all_init2 sets w_type to 0.
   local function external_reset(slot, was, g, flag)
     local first = checker.records[slot].steps[1]
     local reloaded = g.w_type == first[1]
@@ -140,7 +131,6 @@ S.spawn(function()
     load_game_state(before)
     checker:frame(raw, ctx)
 
-    -- Hypothesis: game code reloaded these slots before the check ran this frame.
     local function check_after_reload(slots)
       local saved =
         { lvr = checker.lvr, cp = checker.cp, flag = deep_copy(checker.flag), work = deep_copy(checker.work) }

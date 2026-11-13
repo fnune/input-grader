@@ -1,6 +1,3 @@
--- Bitwise operations on 16-bit words for every Lua the grader runs on: FBNeo and LuaJIT ship
--- the `bit` library (Lua 5.1 has no operators), Lua 5.3+ has native operators and no `bit`.
-
 local M = {}
 
 if type(bit) == "table" and bit.band then

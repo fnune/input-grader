@@ -1,9 +1,3 @@
--- A transliteration of the game's command input check (CMD_MAIN_2.C in the arcade decomp:
--- pl_lvr_set, sw_pick_up, cmd_move, the check_* routines) and of the move-start button test
--- (PLS03.C). Names follow the decomp so each function can be read side by side with it.
--- Fidelity to the game comes first: quirks are kept on purpose, and each deviation is listed
--- in docs/how-it-works.md.
-
 local bits = require("input_grader.core.bits")
 local C = require("input_grader.games.sfiii3.constants")
 
@@ -87,7 +81,6 @@ function Checker.new(fighter)
   return self
 end
 
--- Per-call context, as the game keeps it in globals (cmd_id, waza_type, waza_ptr).
 local cur_self, cur_slot, cur_work, cur_record
 
 local function lvr()
@@ -182,9 +175,6 @@ local function lever_changed()
   return band(l.old_lvbt, C.LV_MASK) ~= band(l.new_lvbt, C.LV_MASK)
 end
 
--- check_0 (CK_LEVER), check_24 (CK_LEVER_NEW) and check_25 (CK_LEVER_HELD) share a shape:
--- an exact lever word, neutral, or any of the bits; they differ in which lever word they read
--- and whether the "any bits" case needs a new press.
 local function lever_match(sw_lever, any_needs_new_press)
   local w = cur_work
   if has(w.w_lvr, C.LV_EXACT) then
@@ -387,7 +377,6 @@ end
 local function check_7()
   local w = cur_work
   w.w_int = w.w_int - 1
-  -- The kick variant starts at the s4 counter, which counts CMD_SW_PP: a quirk of the game.
   local first_counter, first_flag = C.CNT_S1, C.SW_LP
   if w.w_type ~= CK.SHOT_P then
     first_counter, first_flag = C.CNT_S1 + 3, C.SW_LK
@@ -815,7 +804,6 @@ local function command_ok_move(slot)
   end
 end
 
--- pl_lvr_set: make the lever relative to the facing and derive the press/release words.
 local function pl_lvr_set(self, raw, facing_right)
   local l, cp = self.lvr, self.cp
   cp.sw_lvbt = raw

@@ -594,6 +594,14 @@ function drawPearl(kind, x, y, n) {
   if (kind === "clean") goldPlus(x + n - 1, y);
 }
 
+// A soft oval shadow, 5 px wide, under a lifted pearl.
+function liftShadow(x, y) {
+  gui.pixel(x, y, 0x00000050);
+  gui.line(x + 1, y, x + 3, y, 0x00000090);
+  gui.pixel(x + 4, y, 0x00000050);
+  gui.line(x + 1, y + 1, x + 3, y + 1, 0x00000048);
+}
+
 function pearlKind(a) {
   if (!a || !a.ok) return "missed";
   if (a.total === a.minimum) return "perfect";
@@ -611,7 +619,8 @@ function drawPearlStory() {
     const cx = x0 + col * 62;
     gui.text(cx, y0 + 16, labels[col], COL.dim);
     drawPearl(kind, cx + 4, y0, 5);
-    drawPearl(kind, cx + 16, y0 - 1, 7);
+    liftShadow(cx + 17, y0 + 4);
+    drawPearl(kind, cx + 16, y0 - 3, 7);
   });
 }
 
@@ -633,7 +642,9 @@ function drawHistory(box, attempts, shown, style) {
     if (dim && !isShown && a) {
       pearl(x, y, c, 5);
     } else if (big && isShown) {
-      drawPearl(k, x - 1, y - 1, 7);
+      // Lifted: drawn 2 px higher, with a soft oval shadow where it sat.
+      liftShadow(x, y + 4);
+      drawPearl(k, x - 1, y - 3, 7);
     } else {
       drawPearl(k, x, y, 5);
     }

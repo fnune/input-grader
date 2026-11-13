@@ -167,18 +167,29 @@ function reason(a) {
 
 // "used/allowed" text over a bar as long as the window (2 px a frame), filled to the frames used.
 // Green with room to spare, yellow in the last 2 frames, red past the end.
-// A box with the game HUD's 1-pixel corners: the four corner pixels are left out. Built from
-// FBNeo's gui.box (the fill) and gui.line (the four edges), so it ports to Lua as is.
+// A box with the game HUD's bevelled corners: the border steps in one pixel per row for R rows
+// (3, as on the HUD's frames), or less when the box is too small. Built from gui.line only, so it
+// ports to Lua as is.
+const RADIUS = 3;
 function rbox(x1, y1, x2, y2, fill, outline) {
-  if (fill & 255) {
-    gui.box(x1 + 1, y1 + 1, x2 - 1, y2 - 1, fill, fill);
-  }
   if (outline === undefined) outline = fill;
-  if (x2 - x1 < 2 || y2 - y1 < 2) { gui.box(x1, y1, x2, y2, outline, outline); return; }
-  gui.line(x1 + 1, y1, x2 - 1, y1, outline);
-  gui.line(x1 + 1, y2, x2 - 1, y2, outline);
-  gui.line(x1, y1 + 1, x1, y2 - 1, outline);
-  gui.line(x2, y1 + 1, x2, y2 - 1, outline);
+  const r = Math.max(0, Math.min(RADIUS, Math.floor((x2 - x1) / 2), Math.floor((y2 - y1) / 2)));
+  if (fill & 255) {
+    for (let y = y1 + 1; y < y2; y++) {
+      const inset = Math.max(0, r - Math.min(y - y1, y2 - y));
+      if (x1 + inset + 1 <= x2 - inset - 1) gui.line(x1 + inset + 1, y, x2 - inset - 1, y, fill);
+    }
+  }
+  gui.line(x1 + r, y1, x2 - r, y1, outline);
+  gui.line(x1 + r, y2, x2 - r, y2, outline);
+  gui.line(x1, y1 + r, x1, y2 - r, outline);
+  gui.line(x2, y1 + r, x2, y2 - r, outline);
+  if (r > 0) {
+    gui.line(x1, y1 + r, x1 + r, y1, outline);
+    gui.line(x2 - r, y1, x2, y1 + r, outline);
+    gui.line(x1, y2 - r, x1 + r, y2, outline);
+    gui.line(x2 - r, y2, x2, y2 - r, outline);
+  }
 }
 
 // A 9x9 pixel star, outlined in black so it reads over the box edge.

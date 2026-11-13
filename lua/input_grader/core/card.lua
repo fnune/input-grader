@@ -89,7 +89,7 @@ end
 --- "missed", "out", "clean" (every input used at most half its window) or "perfect" (the
 --- fastest possible).
 function M.kind(attempt)
-  if attempt and attempt.parry then
+  if attempt and (attempt.parry or (attempt.mash and not refused(attempt))) then
     return attempt.ok and "out" or "missed"
   end
   if attempt and refused(attempt) then
@@ -348,11 +348,68 @@ local function draw_parry(canvas, attempt, opts)
   return { x0 = x0, x1 = x1, y0 = y0, y1 = y0 + height }
 end
 
+local function mash_reason(attempt)
+  local m, e = attempt.mash, attempt.error
+  if not e then
+    return { m.used + 1 .. "F" }
+  end
+  if e.code == "mash_mixed" then
+    return { "MIXED STRENGTHS" }
+  end
+  if e.code == "mash_short" then
+    return { m.count .. " OF " .. m.need }
+  end
+  return { SHORT[e.code] or e.code }
+end
+
+-- A mash move: one slot per press it needs, filled by the presses in order (a press of another
+-- strength than the most used one is red), and one meter for the frames the presses took.
+local function draw_mash(canvas, attempt, opts)
+  local x0, y0, height = opts.x0, opts.y0, M.HEIGHT
+  local m, ok = attempt.mash, attempt.ok
+  local verdict = ok and COL.good or (M.kind(attempt) == "refused" and COL.dim or COL.bad)
+  local slot_w = 18
+  local width = m.need * slot_w
+  local x1 = x0 + M.PAD + width + M.PAD
+  local ty = y0 - M.NAME_H + 2
+  local name_x = x0 + 1
+  if opts.target then
+    canvas:text(x0 + 1, ty, "TARGET", COL.dim)
+    name_x = x0 + 1 + draw.CHAR_W * 7
+  end
+  local name = attempt.move:upper()
+  canvas:text(name_x, ty, name, COL.text)
+  draw.inline(canvas, name_x + draw.CHAR_W * #name + 6, ty, mash_reason(attempt), ok and COL.dim or COL.bad)
+
+  draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)
+  draw.rbox(canvas, x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, draw.alpha(verdict, 0x28))
+  local ny, ry, my = y0 + 11, y0 + 23, y0 + 37
+  for i = 1, m.need do
+    local mid = x0 + M.PAD + (i - 1) * slot_w + math.floor(slot_w / 2)
+    local press = m.presses[i]
+    local fits = press ~= nil and press.label == m.best
+    local c = fits and COL.good or (press and COL.bad or COL.neutral_slot)
+    draw.rbox(canvas, mid - 7, ny - 7, mid + 7, ny + 7, draw.alpha(c, 0x40), c)
+    draw.icon(canvas, m.best, mid - 5, ny - 5, 11)
+    if press then
+      draw.icon(canvas, press.label, mid - 4, ry, 9)
+    else
+      canvas:text(mid - 6, ry + 1, "---", COL.bad)
+    end
+  end
+  local left = x0 + M.PAD
+  draw.meter(canvas, left + math.floor(width / 2), my, m.used + 1, m.window, left, width)
+  return { x0 = x0, x1 = x1, y0 = y0, y1 = y0 + height }
+end
+
 --- Draws the card for `attempt` with its box's top-left at (opts.x0, opts.y0). opts.target marks
 --- a targeted move; opts.max_x1 caps the right edge. Returns the box { x0, x1, y0, y1 }.
 function M.draw(canvas, attempt, opts)
   if attempt.parry then
     return draw_parry(canvas, attempt, opts)
+  end
+  if attempt.mash then
+    return draw_mash(canvas, attempt, opts)
   end
   local t = attempt.trace
   local x0, y0, height = opts.x0, opts.y0, M.HEIGHT

@@ -13,6 +13,7 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
 - **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
 - **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted.
+- **Mash moves**: Chun-Li's Hyakuretsukyaku, the one move started by mashing, gets a card with a slot per press: five of one kick strength, or why not (too few, or strengths mixed, which the game does not add up).
 - **Parry practice**: target PARRY and let the opponent attack (another player, or the training mode's recorded dummy). Each hit gets a card: the direction the attack needed, your tap, and where the hit landed in your 10-frame window, or how many frames early or late you were. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
 - **Runs inside Fightcade's training mode** as an add-on, next to its hitboxes and input display, with Fightcade's own icons.

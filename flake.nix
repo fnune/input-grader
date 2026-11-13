@@ -98,6 +98,7 @@
 
           validate = app (mameRun pkgs "validate" "harness/mame/validate.lua");
           grade = app (mameRun pkgs "grade" "harness/mame/grade.lua");
+          mash = app (mameRun pkgs "mash" "harness/mame/mash.lua");
         });
 
       formatter = forAll (pkgs: pkgs.nixpkgs-fmt);

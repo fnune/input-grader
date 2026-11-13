@@ -100,6 +100,7 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `parry_early`, `parry_late` | The parry tap came before the window could reach the hit, or after the hit |
 | `parry_direction` | The tap was forward against a low attack, or down against one that is only high |
 | `no_parry` | The attack connected with no tap |
+| `mash_short`, `mash_mixed` | Fewer than five presses of one strength, or five split across strengths |
 | `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |
 
 ## Parries
@@ -112,6 +113,10 @@ The game parries in `defense_ground` and `defense_sky` (`HITCHECK.C`): when an a
 - Right after blocking (`guard_chuu` 1 to 4) a red parry needs the flag at least 9 (specials) or 8 (normals), from `blocking_term_tbl`: 2 or 3 frames.
 
 The grader watches the flags and P1's routine (`routine_no` 0.31 to 0.35 parried, 1.x hit or blocked), and grades each contact a few frames later so a late tap is seen. The live cases in `harness/mame/grade.lua` cover a parry in the window, too early, too late, the wrong direction and a low parry.
+
+## Mash moves
+
+Chun-Li's Hyakuretsukyaku (slot 29) is the only move whose command is a mash step (`CK_RENDA`): five presses of the same strength while the step's count runs (98 frames, restarted when it runs out). Each strength has its own counter, so LK, LK, LK, MK, MK is not five. Slots 8 to 11 ("punch mashing", "kick mashing") are different: animation scripts read them (`comm_rapp` and friends in `CHARMOVE.c`) to keep a move going while the player keeps mashing, so they are not targets. `harness/mame/mash.lua` checks five LK, mixed strengths and four LK live.
 
 ## What the game does that players may not expect
 

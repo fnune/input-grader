@@ -131,8 +131,17 @@ local function selected_art_slots(fighter, art)
   return { [a.ground or -1] = true, [a.air or -1] = true }
 end
 
+local function mash_step(record)
+  for _, step in ipairs(record.steps) do
+    if step[1] == CK.RENDA then
+      return step
+    end
+  end
+  return nil
+end
+
 local function candidate(self, slot, record, flags)
-  if slot < C.SA_GROUND or flags[slot] == -1 then
+  if slot < C.SA_GROUND or flags[slot] == -1 or mash_step(record) then
     return false
   end
   if record.steps[1][1] == CK.NONE or band(record.btix, C.BT_INDEX) == C.BT_NONE then
@@ -178,6 +187,7 @@ function Game:rebuild(obs)
   end
   self.tracker = Tracker.new(tracked)
   self.parry = Parry.new()
+  self.mash_runs = {}
   self.pending = nil
 end
 
@@ -216,6 +226,10 @@ function Game:update()
   local judged = self.parry:update({ flag = obs.state.flag, contact = obs.contact })
   if judged and self.options.target == self.fighter.name .. ":parry" then
     table.insert(graded, self:parry_attempt(judged, obs))
+  end
+  local mashed = self:mash_attempt(obs, pressed)
+  if mashed then
+    table.insert(graded, mashed)
   end
   local buttonless = self:buttonless_attempt(obs)
   if buttonless then
@@ -519,6 +533,93 @@ end
 
 -- Each step needs a frame of its own, except one that follows a release: letting go of 6 and
 -- pressing 2 can happen on the same frame.
+local MASH_NEED, MASH_GAP, MASH_MIN_UNTARGETED = 5, 15, 4
+local PUNCHES = { C.SW_LP, C.SW_MP, C.SW_HP }
+local KICKS = { C.SW_LK, C.SW_MK, C.SW_HK }
+
+function Game:mash_record(slot, record, run, ok)
+  local counts, best = {}, nil
+  for _, press in ipairs(run.presses) do
+    counts[press.label] = (counts[press.label] or 0) + 1
+    if not best or counts[press.label] > counts[best] then
+      best = press.label
+    end
+  end
+  local mine = {}
+  for _, press in ipairs(run.presses) do
+    if press.label == best then
+      table.insert(mine, press.frame)
+    end
+  end
+  local count = math.min(counts[best], MASH_NEED)
+  local used = mine[count] - mine[1]
+  local error
+  if not ok then
+    if count >= MASH_NEED then
+      error = { code = "not_allowed", text = "five presses in time; the game did not start the move" }
+    elseif #run.presses >= MASH_NEED then
+      error = { code = "mash_mixed", text = "presses of one strength count; these were split" }
+    else
+      error = { code = "mash_short", text = count .. " of " .. MASH_NEED .. " presses" }
+    end
+  end
+  local window = mash_step(record)[2]
+  return {
+    game = "sfiii3",
+    character = self.fighter.name,
+    id = self.fighter.name .. ":" .. slot,
+    move = record.name,
+    notation = record.notation,
+    frame = self.frame,
+    side = run.facing_right and "right" or "left",
+    ok = ok,
+    error = error,
+    steps = { { label = best .. " x" .. count, used = used, window = window } },
+    total = used,
+    minimum = 2 * (MASH_NEED - 1),
+    margin = window - used,
+    mash = { count = count, need = MASH_NEED, best = best, used = used, window = window, presses = run.presses },
+    trace = { frames = {}, steps = {} },
+  }
+end
+
+-- A move started by pressing one button repeatedly (Chun-Li's Hyakuretsukyaku) is one attempt per
+-- burst of presses, ended by the move starting or by a pause.
+function Game:mash_attempt(obs, pressed)
+  for slot, record in pairs(self.fighter.slots) do
+    local step = slot >= C.SP_GROUND and mash_step(record)
+    if step then
+      local id = self.fighter.name .. ":" .. slot
+      local targeted = self.options.target == id
+      local wanted = not self.options.target or targeted
+      local run = self.mash_runs[slot]
+      local group = step[4] == C.SW_LP and PUNCHES or KICKS
+      for _, sw in ipairs(group) do
+        if has(pressed, sw) then
+          if not run or self.frame - run.last > MASH_GAP then
+            run = { presses = {}, facing_right = obs.facing_right }
+            self.mash_runs[slot] = run
+          end
+          table.insert(run.presses, { frame = self.frame, label = inputs.buttons_text(sw) })
+          run.last = self.frame
+        end
+      end
+      if run and wanted and not run.done and obs.started and obs.started.slot == slot then
+        run.done = true
+        return self:mash_record(slot, record, run, true)
+      end
+      if run and self.frame - run.last > MASH_GAP then
+        self.mash_runs[slot] = nil
+        local enough = #run.presses >= (targeted and 2 or MASH_MIN_UNTARGETED)
+        if wanted and not run.done and enough then
+          return self:mash_record(slot, record, run, false)
+        end
+      end
+    end
+  end
+  return nil
+end
+
 function Game:parry_attempt(j, obs)
   local tap = j.tap
   local need = j.needed[1] or 6

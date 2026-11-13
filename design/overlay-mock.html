@@ -400,7 +400,7 @@ function drawLane(a, opt) {
   // Move name and the one-line reason above the box, as plain outlined text.
   const name = a.move.toUpperCase();
   gui.text(x0 + 1, y0 - tabH + 2, name, COL.text);
-  const tail = safe ? [perfect ? "FRAME PERFECT" : "CLEAN"] : r.parts;
+  const tail = safe ? [perfect ? "FRAME-PERFECT" : "CLEAN"] : r.parts;
   const tx = inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, tail, safe ? COL.gold : ok ? COL.dim : COL.warn);
   if (safe && !perfect) inline(tx + 6, y0 - tabH + 2, r.parts, COL.dim);
 

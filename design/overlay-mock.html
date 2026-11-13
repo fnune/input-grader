@@ -326,6 +326,7 @@ function drawLane(a, opt) {
       let bx = mid + opt.length * 8;
       opt.forEach((d, i) => {
         const ox = mid - opt.length * 8 + i * 16 - 1;
+        gui.box(ox - 6, ny - 6, ox + 6, ny + 6, (COL.dim & 0xFFFFFF00) | 0x30, (COL.dim & 0xFFFFFF00) | 0x30);
         dashed(ox - 7, ny - 7, ox + 7, ny + 7, COL.dim);
         gui.image(ox - 4, ny - 4, dirKey(d), 9, 9);
       });
@@ -342,7 +343,7 @@ function drawLane(a, opt) {
       const s = t.steps[k], d = Number(s.label), prev = reach[k - 1];
       const accepted = s.at !== undefined, missed = !ok && r.step === k;
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
-      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | (accepted ? 0x40 : 0), c);
+      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);

@@ -264,7 +264,8 @@ function runsOf(frames) {
   return runs;
 }
 
-const COUNT_W = r => (r.dir && r.n > 1 ? 4 * String(r.n).length + 1 : 0);
+// Frames held are only shown where no meter says it already: the START column.
+const COUNT_W = r => (r.counted && r.dir && r.n > 1 ? 4 * String(r.n).length + 1 : 0);
 const RUN_W = r => (r.dir ? 10 : 0) + COUNT_W(r) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
 
 function drawRuns(cx, y, runs, color, culprit = () => false) {
@@ -300,6 +301,7 @@ function drawLane(a, opt) {
   const gx = x0 + 4;
   const colW = k => {
     const runs = k < t.steps.length ? runsOf(cols[k]) : runsOf(buttonCol);
+    if (k === 0) runs.forEach(run => { run.counted = true; });
     const win = k < t.steps.length ? (t.steps[k].window || 0) : t.button_window;
     const extra = k < t.steps.length ? 0 : (t.optional || []).length * 16;
     const runsW = runs.reduce((s, r) => s + Math.max(RUN_W(r), 9) + 3, 0);
@@ -364,6 +366,7 @@ function drawLane(a, opt) {
       const culprit = run =>
         (missed && a.error.code === "cancelled" && run.dir === 8) ||
         (a.error && a.error.code === "early_button" && run.press !== "");
+      if (k === 0) runs.forEach(run => { run.counted = true; });
       if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
       else gui.text(mid - 6, ry + 1, "---", COL.bad);
       if (k === 0) gui.text(mid - 10, my, "START", COL.dim);

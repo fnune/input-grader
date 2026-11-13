@@ -245,7 +245,16 @@ const safeUse = (used, window) => used <= Math.floor(window / 2);
 // "used/allowed" over a square bar spanning the column (left .. left + width). The bar covers the
 // window, or window plus overrun when late, with a notch where the window ends and a tick at its
 // half. Fill: green while safe, yellow past half the window, red past the end.
-function meter(x, y, used, window, left, width) {
+// `used` null: the part never happened. The bar still shows how many frames it allows, empty,
+// under "-/10" or under `text` when given (CANCELLED).
+function meter(x, y, used, window, left, width, text) {
+  if (used === null) {
+    const label = text || `-/${window}`;
+    gui.text(x - label.length * 2, y, label, text ? COL.bad : COL.dim);
+    gui.box(left, y + 9, left + width - 1, y + 11, COL.cell, COL.edge);
+    gui.line(left + Math.round((width - 1) / 2), y + 8, left + Math.round((width - 1) / 2), y + 12, 0xFFFFFF60);
+    return;
+  }
   const label = `${used}/${window}`;
   const c = used > window ? COL.bad : safeUse(used, window) ? COL.good : COL.warn;
   gui.text(x - label.length * 2, y, label, c);
@@ -436,7 +445,9 @@ function drawLane(a, opt) {
       const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
       if (btn) gui.image(bx - 5, ny - 5, btn, 11, 11);
       drawRuns(mid, ry, runsOf(buttonCol).filter(r => r.press || r.dir), COL.dim);
-      if (t.complete_at !== undefined && t.complete_at !== null) {
+      if (t.complete_at === undefined || t.complete_at === null) {
+        meter(mid, my, null, t.button_window, cx, w);
+      } else {
         const after = t.button_at - t.complete_at;
         if (after >= 0) meter(mid, my, after, t.button_window, cx, w);
         else gui.text(mid - 2 * 5, my, "EARLY", COL.bad);
@@ -460,8 +471,9 @@ function drawLane(a, opt) {
       if (runs.length) drawRuns(mid, ry, runs, COL.dim, culprit);
       else gui.text(mid - 6, ry + 1, "---", COL.bad);
       if (k === 0) gui.text(mid - 10, my, "START", COL.dim);
-      else if (missed && a.error.code === "cancelled") gui.text(mid - 2 * 9, my, "CANCELLED", COL.bad);
+      else if (missed && a.error.code === "cancelled") meter(mid, my, null, s.window, cx, w, "CANCELLED");
       else if (s.window && prev !== undefined && reach[k] !== undefined) meter(mid, my, reach[k] - prev, s.window, cx, w);
+      else if (s.window) meter(mid, my, null, s.window, cx, w);
     }
     cx += w + GAP;
   }

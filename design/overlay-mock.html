@@ -131,7 +131,7 @@ function dirVec(d) { return [((d - 1) % 3) - 1, -(Math.floor((d - 1) / 3) - 1)];
 // An arrow for a numpad direction, centred on (cx, cy), about 2r+1 pixels across.
 function arrow(cx, cy, d, r, c) {
   const [vx, vy] = dirVec(d);
-  if (vx === 0 && vy === 0) { gui.box(cx - 1, cy - 1, cx + 1, cy + 1, c, c); return; }
+  if (vx === 0 && vy === 0) { rbox(cx - 1, cy - 1, cx + 1, cy + 1, c, c); return; }
   const tx = cx + vx * r, ty = cy + vy * r;
   gui.line(cx - vx * r, cy - vy * r, tx, ty, c);
   if (vx === 0 || vy === 0) gui.line(cx - vx * r + vy, cy - vy * r + vx, tx + vy, ty + vx, c);
@@ -167,6 +167,20 @@ function reason(a) {
 
 // "used/allowed" text over a bar as long as the window (2 px a frame), filled to the frames used.
 // Green with room to spare, yellow in the last 2 frames, red past the end.
+// A box with the game HUD's 1-pixel corners: the four corner pixels are left out. Built from
+// FBNeo's gui.box (the fill) and gui.line (the four edges), so it ports to Lua as is.
+function rbox(x1, y1, x2, y2, fill, outline) {
+  if (fill & 255) {
+    gui.box(x1 + 1, y1 + 1, x2 - 1, y2 - 1, fill, fill);
+  }
+  if (outline === undefined) outline = fill;
+  if (x2 - x1 < 2 || y2 - y1 < 2) { gui.box(x1, y1, x2, y2, outline, outline); return; }
+  gui.line(x1 + 1, y1, x2 - 1, y1, outline);
+  gui.line(x1 + 1, y2, x2 - 1, y2, outline);
+  gui.line(x1, y1 + 1, x1, y2 - 1, outline);
+  gui.line(x2, y1 + 1, x2, y2 - 1, outline);
+}
+
 // A box outline drawn every other pixel: something optional.
 function dashed(x1, y1, x2, y2, c) {
   for (let x = x1; x <= x2; x += 2) { gui.pixel(x, y1, c); gui.pixel(x, y2, c); }
@@ -178,10 +192,10 @@ function meter(x, y, used, window) {
   const left = x - Math.floor(w / 2);
   const c = used > window ? COL.bad : window - used <= 2 ? COL.warn : COL.good;
   gui.text(x - label.length * 2, y, label, c);
-  gui.box(left, y + 9, left + w, y + 11, COL.cell, COL.edge);
+  rbox(left, y + 9, left + w, y + 11, COL.cell, COL.edge);
   const fill = Math.min(used, window) * PX;
-  if (fill > 0) gui.box(left, y + 9, left + fill, y + 11, c, c);
-  if (used > window) gui.box(left + w, y + 9, left + w + Math.min((used - window) * PX, 12), y + 11, COL.bad, COL.bad);
+  if (fill > 0) rbox(left, y + 9, left + fill, y + 11, c, c);
+  if (used > window) rbox(left + w, y + 9, left + w + Math.min((used - window) * PX, 12), y + 11, COL.bad, COL.bad);
 }
 
 // Draws a run of text and icons on one line, returning the x after it. Icons are 9 px.
@@ -274,8 +288,8 @@ function drawRuns(cx, y, runs, color, culprit = () => false) {
   let x = cx - Math.floor(total / 2);
   runs.forEach((r, i) => {
     let ix = x;
-    if (culprit(r)) gui.box(x - 2, y - 2, x + Math.max(RUN_W(r), 9) + 1, y + 10, 0xFF5A5A60, COL.bad);
-    if (r.dir === 5) gui.box(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
+    if (culprit(r)) rbox(x - 2, y - 2, x + Math.max(RUN_W(r), 9) + 1, y + 10, 0xFF5A5A60, COL.bad);
+    if (r.dir === 5) rbox(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
     else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
     if (r.dir) ix += 10;
     // Frames held, right after the direction it belongs to.
@@ -317,8 +331,8 @@ function drawLane(a, opt) {
   inline(x0 + 1 + 4 * name.length + 6, y0 - tabH + 2, r.parts, ok ? COL.dim : COL.warn);
 
   // The box, tinted with the verdict.
-  gui.box(x0, y0, x1, y0 + height, COL.panel, verdict);
-  gui.box(x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, (verdict & 0xFFFFFF00) | 0x28, (verdict & 0xFFFFFF00) | 0x28);
+  rbox(x0, y0, x1, y0 + height, COL.panel, verdict);
+  rbox(x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, (verdict & 0xFFFFFF00) | 0x28, (verdict & 0xFFFFFF00) | 0x28);
 
   // Right: one column per step plus the button. Row 1 what was needed, row 2 what you did in
   // that column's time, row 3 the timing meter.
@@ -336,11 +350,11 @@ function drawLane(a, opt) {
       let bx = mid + opt.length * 8;
       opt.forEach((d, i) => {
         const ox = mid - opt.length * 8 + i * 16 - 1;
-        gui.box(ox - 6, ny - 6, ox + 6, ny + 6, (COL.dim & 0xFFFFFF00) | 0x30, (COL.dim & 0xFFFFFF00) | 0x30);
+        rbox(ox - 6, ny - 6, ox + 6, ny + 6, (COL.dim & 0xFFFFFF00) | 0x30, (COL.dim & 0xFFFFFF00) | 0x30);
         dashed(ox - 7, ny - 7, ox + 7, ny + 7, COL.dim);
         gui.image(ox - 4, ny - 4, dirKey(d), 9, 9);
       });
-      gui.box(bx - 7, ny - 7, bx + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
+      rbox(bx - 7, ny - 7, bx + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
       if (btn) gui.image(bx - 5, ny - 5, btn, 11, 11);
       drawRuns(mid, ry, runsOf(buttonCol).filter(r => r.press || r.dir), COL.dim);
@@ -353,7 +367,7 @@ function drawLane(a, opt) {
       const s = t.steps[k], d = Number(s.label), prev = reach[k - 1];
       const accepted = s.at !== undefined, missed = !ok && r.step === k;
       const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
-      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
+      rbox(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
       if (!accepted && missed && reach[k] === undefined) {
         gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);

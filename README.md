@@ -100,7 +100,7 @@ Details in [how it works](docs/how-it-works.md); every move's windows in [window
 ## Limitations
 
 - P1 only.
-- Validated in the real game on the Japan 990608 set. Fightcade's 990512 set has identical command tables and RAM layout as far as checked; a validation run on it is pending.
+- Validated in the real game on both the Japan 990608 set and Fightcade's 990512 set.
 - Charge, 360 and mash moves are graded, with less specific feedback than motions.
 - The end-to-end verdict checks use Ryu; other characters' command checks are validated frame by frame, but their verdicts have only been spot-checked.
 - The screenshots come from the MAME test bench; FBNeo draws the same overlay with its own small font.
@@ -138,7 +138,6 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 
 ## Roadmap
 
-- A validation run on Fightcade's `sfiii3nr1` set.
 - P2 support, so you can grade from either side of a netplay or training session.
 - A training journal: progress per move over days and weeks, built from the attempt log.
 - Browsing old attempts: keep the last 20 cards, a row of dots under the card for recent results, and two keys to step back and forward. FBNeo's Alt hotkeys are mostly taken, so read keys with `input.get()`; pick ones that work on ISO layouts (not `[` and `]`, which need AltGr on many of them), such as Page Up and Page Down, and make them configurable.

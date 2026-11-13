@@ -55,6 +55,7 @@ Frames where the game did not run the check (super freeze, `do_not_move`) and sl
 | --- | --- | --- |
 | All 21 character entries, 120 attempts each (`VALIDATE_CHAR=0..20`) | 142,748 | 0 |
 | Ryu, 400 attempts, seed 3 | 22,705 | 0 |
+| Ryu on the 990512 set (`ROMSET=sfiii3nr1`), 400 attempts, seed 21 | 22,661 | 0 |
 | Ryu, 600 attempts, seed 11 | 34,033 | 1, in the high-jump and parry slots, which the grader does not use |
 
 ### The grader against the game
@@ -120,7 +121,7 @@ See [windows.md](windows.md) for every character's steps and windows.
 
 ## Known limits
 
-- Validated on the Japan 990608 set (`sfiii3n`). Fightcade runs Japan 990512 (`sfiii3nr1`). The command records match the decomp, which was built from 990512, byte for byte, and 3rd_training_lua's 990512 addresses land on the same structures; a validation run on `sfiii3nr1` is still to do.
+- Validated on both Japan sets: 990608 (`sfiii3n`) and 990512 (`sfiii3nr1`, the one Fightcade runs). The end-to-end grading cases pass on both.
 - P1 only. The RAM map has P2's addresses; the overlay and options do not expose P2 yet.
 - The end-to-end grading cases use Ryu. Every character's checker has been validated frame by frame, but the verdicts have only been spot-checked with Ryu's moves.
 - Charge, 360 and mash moves are graded from the game's state, but their feedback is less specific than for motions.

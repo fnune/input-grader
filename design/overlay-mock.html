@@ -619,8 +619,8 @@ function drawPearlStory() {
     const cx = x0 + col * 62;
     gui.text(cx, y0 + 16, labels[col], COL.dim);
     drawPearl(kind, cx + 4, y0, 5);
-    liftShadow(cx + 17, y0 + 4);
-    drawPearl(kind, cx + 16, y0 - 3, 7);
+    liftShadow(cx + 17, y0 + 6);
+    drawPearl(kind, cx + 16, y0 - 1, 7);
   });
 }
 
@@ -642,9 +642,9 @@ function drawHistory(box, attempts, shown, style) {
     if (dim && !isShown && a) {
       pearl(x, y, c, 5);
     } else if (big && isShown) {
-      // Lifted: drawn 2 px higher, with a soft oval shadow where it sat.
-      liftShadow(x, y + 4);
-      drawPearl(k, x - 1, y - 3, 7);
+      // Lifted: a soft oval shadow just under it.
+      liftShadow(x, y + 6);
+      drawPearl(k, x - 1, y - 1, 7);
     } else {
       drawPearl(k, x, y, 5);
     }

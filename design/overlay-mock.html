@@ -20,11 +20,11 @@
 <div class="bar">
   <span>Scale</span><span id="scales"></span>
   <span>Position</span><span id="positions"></span>
-  <span>Training input history</span><span id="history"></span>
+  <span>Fightcade input display</span><span id="history"></span>
   <span>Show</span><span id="toggles"></span>
 </div>
 <canvas id="screen" width="384" height="224"></canvas>
-<p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (3rd_training_lua's own icons, read from <code>vendor/</code>) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
+<p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (Fightcade training mode's own icon sheet, read from your Fightcade install) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
 
 <script>
 // ---- A stand-in for FBNeo's gui library: same calls, same coordinates, RGBA colours. ----
@@ -32,13 +32,16 @@ const W = 384, H = 224;
 const fb = document.createElement("canvas"); fb.width = W; fb.height = H;
 const ctx = fb.getContext("2d");
 const bg = new Image(); bg.src = "background.png";
-// 3rd_training_lua's icons, read from the local checkout at runtime exactly as the launcher will.
-const ICON_DIR = "../vendor/3rd_training_lua/images/";
-const IMG = {};
-const iconNames = [];
-for (let d = 1; d <= 9; d++) { iconNames.push(["dir_big_" + d, "big/" + d + "_dir.png"], ["dir_small_" + d, "small/" + d + "_dir.png"]); }
-for (const b of ["LP", "MP", "HP", "LK", "MK", "HK"]) iconNames.push(["btn_" + b, "small/" + b + "_button.png"]);
-for (const [key, file] of iconNames) { const im = new Image(); im.onload = () => render(); im.src = ICON_DIR + file; IMG[key] = im; }
+// Fightcade training mode's icon sheet (fbneo-training-mode, inputs/scrolling-input/icons-capcom-32.png),
+// read from the local Fightcade install through build/fightcade-training; never copied into the repo.
+const SHEET = new Image(); SHEET.onload = () => render();
+SHEET.src = "../build/fightcade-training/inputs/scrolling-input/icons-capcom-32.png";
+const SHEET_ROW = { l: 0, r: 1, u: 2, d: 3, ul: 4, ur: 5, dl: 6, dr: 7, LP: 8, MP: 9, HP: 10, LK: 11, MK: 12, HK: 13 };
+// Numpad digit to the sheet's absolute direction, for a player facing right (mirrored when facing left).
+function dirKey(d, facingRight = true) {
+  const k = { 1: "dl", 2: "d", 3: "dr", 4: "l", 6: "r", 7: "ul", 8: "u", 9: "ur" }[d];
+  return facingRight || !k ? k : k.replace("l", "_").replace("r", "l").replace("_", "r");
+}
 
 function rgba(c) { return `rgba(${c >>> 24 & 255},${c >>> 16 & 255},${c >>> 8 & 255},${(c & 255) / 255})`; }
 function px(x, y, c) { if (x < 0 || y < 0 || x >= W || y >= H) return; ctx.fillStyle = rgba(c); ctx.fillRect(x, y, 1, 1); }
@@ -57,7 +60,11 @@ const gui = {
     for (;;) { px(x1, y1, c); if (x1 === x2 && y1 === y2) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x1 += sx; } if (e2 <= dx) { e += dx; y1 += sy; } }
   },
   // gui.image(x, y, gdStr): a PNG at its own size.
-  image(x, y, key) { const im = IMG[key]; if (im && im.complete && im.naturalWidth) ctx.drawImage(im, x, y); },
+  // gui.image(x, y, gdStr) of a sheet cell resampled to w x h, as the training mode prepares its icons.
+  image(x, y, key, w, h) {
+    if (!SHEET.complete || !SHEET.naturalWidth || SHEET_ROW[key] === undefined) return;
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(SHEET, 0, SHEET_ROW[key] * 32, 32, 32, x, y, w, h);
+  },
   text(x, y, s, color = 0xFFFFFFFF, outline = 0x000000FF) {
     for (const ch of String(s)) {
       const g = FBNEO_FONT[ch.charCodeAt(0) - 32];
@@ -92,26 +99,31 @@ function panelFit(y1, y2, avoid) {
   return { x1, x2, compact: x2 - x1 < LAYOUT.COMPACT_BELOW };
 }
 
-// The training script's input history column, drawn the way src/input_history.lua does:
-// newest entry on top, one 10 px row each, direction icon then buttons, frames held on the left.
-function trainingHistory(a, side) {
-  const runs = [];
+// Fightcade training mode's scrolling input display (Dammit's, in fbneo-training-mode) at its defaults:
+// 10 px rows, icons 12.86 px wide, 1 icon-width from the left, 6 rows from the top, 13 lines, newest on top.
+function fightcadeInputs(a) {
+  const ICON = 10, IW = 10 * (384 / 224) / (4 / 3), X0 = Math.floor(IW), Y0 = 6 * ICON;
+  const lines = [];
+  let prev = null;
   for (const f of a.trace.frames) {
-    const last = runs[runs.length - 1];
-    if (last && last.dir === f.dir && !f.press) last.n++; else runs.push({ dir: f.dir, press: f.press, n: 1 });
+    const key = f.dir + "|" + f.press;
+    if (key !== prev && (f.dir !== 5 || f.press)) lines.push(f);
+    prev = key;
   }
-  const rows = runs.reverse().slice(0, 15);
-  while (rows.length < 15) rows.push({ dir: 5, press: "", n: 40 + rows.length * 7 });
-  const right = side === "right", x = right ? LAYOUT.W - 4 : 4;
-  rows.forEach((r, j) => {
-    const y = 49 + j * 10, sign = right ? -1 : 1, cx = x + 14 * sign + (right ? -9 : 0);
-    gui.image(cx, y, "dir_small_" + r.dir);
-    let bx = cx + sign * 11;
-    for (const b of (r.press.match(/[LMH][PK]/g) || [])) { gui.image(right ? bx - 9 : bx, y, "btn_" + b); bx += sign * 8; }
-    const t = String(r.n);
-    gui.text(right ? x - 11 : x + (r.n >= 100 ? 0 : r.n >= 10 ? 4 : 8), y + 1, t, 0xd6e3efff, 0x101000ff);
+  lines.reverse();
+  // Older play before the attempt, so the column is as full as it usually is.
+  const filler = [{ dir: 6, press: "" }, { dir: 2, press: "MK" }, { dir: 4, press: "" }, { dir: 5, press: "HP" }, { dir: 3, press: "" }];
+  for (let i = 0; lines.length < 13; i++) lines.push(filler[i % filler.length]);
+  const shown = lines.slice(0, 13);
+  let widest = 0;
+  shown.forEach((f, line) => {
+    const icons = [];
+    if (f.dir !== 5) icons.push(dirKey(f.dir));
+    for (const b of (f.press.match(/[LMH][PK]/g) || [])) icons.push(b);
+    icons.forEach((k, i) => gui.image(Math.floor(i * IW + X0), line * ICON + Y0, k, Math.floor(IW), ICON));
+    widest = Math.max(widest, icons.length);
   });
-  return { x1: right ? LAYOUT.W - 82 : 0, y1: 49, x2: right ? LAYOUT.W : 82, y2: 49 + rows.length * 10 };
+  return { x1: 0, y1: Y0, x2: Math.ceil(X0 + widest * IW) + 2, y2: Y0 + shown.length * ICON };
 }
 
 function dirVec(d) { return [((d - 1) % 3) - 1, -(Math.floor((d - 1) / 3) - 1)]; }
@@ -160,7 +172,7 @@ function reason(a) {
 function drawLane(a, opt) {
   const t = a.trace, n = t.frames.length;
   const y0 = opt.position === "top" ? 44 : opt.position === "middle" ? 104 : 150;
-  const avoid = opt.history !== "off" ? [trainingHistory(a, opt.history)] : [];
+  const avoid = opt.history === "on" ? [fightcadeInputs(a)] : [];
   const fit = panelFit(y0, y0 + 60, avoid), compact = fit.compact;
   const x0 = fit.x1, x1 = fit.x2;
   const showInputs = opt.inputs && !compact;
@@ -207,7 +219,7 @@ function drawLane(a, opt) {
     if (s.at !== undefined) {
       const late = !ok && r.step === k, c = late ? COL.bad : COL.good;
       gui.box(X(s.at) - 6, ay - 6, X(s.at) + 6, ay + 6, (c & 0xFFFFFF00) | 0x40, c);
-      if (opt.icons) gui.image(X(s.at) - 5, ay - 5, "dir_big_" + d); else arrow(X(s.at), ay, d, 3, c);
+      if (opt.icons) gui.image(X(s.at) - 6, ay - 6, dirKey(d), 13, 13); else arrow(X(s.at), ay, d, 3, c);
     } else {
       // Not accepted: where that direction actually arrived after the previous step, dimmed,
       // and for the step the miss is about, a red ghost if it never came at all.
@@ -217,13 +229,13 @@ function drawLane(a, opt) {
       if (seenAt > 0) {
         const c = k === r.step ? COL.bad : COL.dim;
         gui.box(X(seenAt) - 6, ay - 6, X(seenAt) + 6, ay + 6, 0x00000000, c);
-        if (opt.icons) gui.image(X(seenAt) - 5, ay - 5, "dir_big_" + d); else arrow(X(seenAt), ay, d, 3, c);
+        if (opt.icons) gui.image(X(seenAt) - 6, ay - 6, dirKey(d), 13, 13); else arrow(X(seenAt), ay, d, 3, c);
       } else if (k === r.step) {
         const later = t.steps.slice(k + 1).map(x => t.frames.findIndex((fr, i) => i + 1 >= from && fr.dir === Number(x.label)) + 1).find(f => f > 0);
         const next = later ? { at: later } : null;
         const gx = Math.round((X(from) + (next ? X(next.at) : X(t.button_at))) / 2);
         gui.box(gx - 6, ay - 6, gx + 6, ay + 6, 0x00000000, COL.bad);
-        if (opt.icons) gui.image(gx - 5, ay - 5, "dir_big_" + d); else arrow(gx, ay, d, 3, COL.bad);
+        if (opt.icons) gui.image(gx - 6, ay - 6, dirKey(d), 13, 13); else arrow(gx, ay, d, 3, COL.bad);
         gui.line(gx - 6, ay + 6, gx + 6, ay - 6, COL.bad);
       }
     }
@@ -235,7 +247,7 @@ function drawLane(a, opt) {
       const f = t.frames.findIndex((fr, i) => i + 1 > (t.steps[r.step - 1]?.at || 0) && fr.dir === d) + 1;
       if (f > 0 && t.steps[k].at === undefined) {
         gui.box(X(f) - 6, ay - 6, X(f) + 6, ay + 6, 0x00000000, COL.dim);
-        if (opt.icons) gui.image(X(f) - 5, ay - 5, "dir_big_" + d); else arrow(X(f), ay, d, 3, COL.dim);
+        if (opt.icons) gui.image(X(f) - 6, ay - 6, dirKey(d), 13, 13); else arrow(X(f), ay, d, 3, COL.dim);
       }
     }
   }
@@ -246,7 +258,7 @@ function drawLane(a, opt) {
   const by = ay + 16;
   gui.box(bxp - 6, by - 6, bxp + 6, by + 6, (bc & 0xFFFFFF00) | 0x40, bc);
   const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
-  if (opt.icons && btn) gui.image(bxp - 4, by - 4, "btn_" + btn); else gui.text(bxp - 3, by - 3, a.button.label[1] || "?", COL.text, 0);
+  if (opt.icons && btn) gui.image(bxp - 5, by - 5, btn, 11, 11); else gui.text(bxp - 3, by - 3, a.button.label[1] || "?", COL.text, 0);
   y = by + 8;
   if (compact) gui.text(x0 + 4, y0 + 32, r.text, ok ? COL.dim : COL.warn);
 
@@ -275,7 +287,7 @@ function drawLane(a, opt) {
 }
 
 // ---- Page controls ----
-const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "left" };
+const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on" };
 function render() {
   const cv = document.getElementById("screen");
   cv.style.width = W * state.scale + "px"; cv.style.height = H * state.scale + "px";
@@ -296,7 +308,7 @@ function buttons(id, key, values, label = v => v) {
 buttons("scenarios", "scenario", SCENARIOS.map((_, i) => i), i => SCENARIOS[i].name);
 buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
 buttons("positions", "position", ["bottom", "middle", "top"]);
-buttons("history", "history", ["off", "left", "right"]);
+buttons("history", "history", ["off", "on"]);
 const tg = document.getElementById("toggles");
 for (const k of ["icons", "inputs", "ruler"]) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";

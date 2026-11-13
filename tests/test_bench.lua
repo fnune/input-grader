@@ -54,6 +54,17 @@ return {
     end,
   },
   {
+    "an input the game refused (busy, fireball on screen) counts as a good input",
+    function()
+      local b = Bench.new(function()
+        return 0
+      end)
+      b:start()
+      b:record(attempt(false, "right", "not_allowed"))
+      T.eq(b:stop().moves[1].ok, 1)
+    end,
+  },
+  {
     "a target ignores other moves",
     function()
       local b = Bench.new(function()

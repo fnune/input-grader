@@ -13,7 +13,7 @@ local SHORT = {
   cancelled = "CANCELLED",
   missing_step = "INCOMPLETE",
   other_move = "OTHER MOVE",
-  not_allowed = "REFUSED",
+  not_allowed = "GAME REFUSED",
 }
 
 local function label_dir(label)
@@ -68,10 +68,11 @@ function M.reason(attempt)
   return { parts = { SHORT[code] or code }, step = k }
 end
 
+local function refused(attempt)
+  return not attempt.ok and attempt.error ~= nil and attempt.error.code == "not_allowed"
+end
+
 local function safe(attempt)
-  if not attempt.ok then
-    return false
-  end
   local t = attempt.trace
   for k, s in ipairs(t.steps) do
     local prev = t.steps[k - 1]
@@ -88,6 +89,9 @@ end
 --- "missed", "out", "clean" (every input used at most half its window) or "perfect" (the
 --- fastest possible).
 function M.kind(attempt)
+  if attempt and refused(attempt) then
+    return "refused"
+  end
   if not attempt or not attempt.ok then
     return "missed"
   end
@@ -274,8 +278,9 @@ function M.draw(canvas, attempt, opts)
   local ok = attempt.ok
   local r = M.reason(attempt)
   local kind = M.kind(attempt)
-  local perfect, starred = kind == "perfect", kind == "perfect" or kind == "clean"
-  local verdict = perfect and COL.gold or (ok and COL.good or COL.bad)
+  local perfect = kind == "perfect"
+  local starred = perfect or kind == "clean" or (kind == "refused" and safe(attempt))
+  local verdict = perfect and COL.gold or (ok and COL.good or (kind == "refused" and COL.dim or COL.bad))
   local reach, cols, button_col = M.columns(attempt)
   local has_button = attempt.button ~= nil
   local last_col = has_button and #t.steps + 1 or #t.steps
@@ -315,10 +320,10 @@ function M.draw(canvas, attempt, opts)
   end
   canvas:text(name_x, ty, name, COL.text)
   local tail = starred and { perfect and "FRAME-PERFECT" or "CLEAN" } or r.parts
-  local tail_colour = starred and COL.gold or (ok and COL.dim or COL.bad)
+  local tail_colour = starred and COL.gold or ((ok or kind == "refused") and COL.dim or COL.bad)
   local tx = draw.inline(canvas, name_x + draw.CHAR_W * #name + 6, ty, tail, tail_colour)
   if starred and not perfect then
-    draw.inline(canvas, tx + 6, ty, r.parts, COL.dim)
+    draw.inline(canvas, tx + 6, ty, kind == "refused" and { "GAME REFUSED" } or r.parts, COL.dim)
   end
 
   draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)

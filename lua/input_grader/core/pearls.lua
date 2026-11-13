@@ -6,12 +6,10 @@ local M = {}
 
 M.VISIBLE, M.STEP = 12, 9
 
+local KIND_COL = { missed = COL.bad, refused = COL.dim, perfect = COL.gold }
+
 local function draw_kind(canvas, kind, x, y, n)
-  if kind == "perfect" then
-    draw.pearl(canvas, x, y, COL.gold, n)
-  else
-    draw.pearl(canvas, x, y, kind == "missed" and COL.bad or COL.good, n)
-  end
+  draw.pearl(canvas, x, y, KIND_COL[kind] or COL.good, n)
   if kind == "perfect" or kind == "clean" then
     draw.gold_plus(canvas, x + n - 1, y)
   end
@@ -28,7 +26,7 @@ function M.draw(canvas, box, attempts, shown)
       draw.lift_shadow(canvas, x, y + 5)
       draw_kind(canvas, kind, x - 1, y - 1, 7)
     else
-      local c = kind == "missed" and COL.bad or (kind == "perfect" and COL.gold or COL.good)
+      local c = KIND_COL[kind] or COL.good
       draw.pearl(canvas, x, y, draw.alpha(c, 0x70), 5)
     end
     x = x + M.STEP

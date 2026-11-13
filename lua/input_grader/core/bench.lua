@@ -65,14 +65,15 @@ function Bench:summary()
       moves[a.id] = m
       table.insert(order, m)
     end
+    local good_input = a.ok or (a.error ~= nil and a.error.code == "not_allowed")
     m.n = m.n + 1
-    if a.ok then
+    if good_input then
       m.ok = m.ok + 1
     end
-    table.insert(m.results, a.ok)
+    table.insert(m.results, good_input)
     local side = m.sides[a.side or "?"] or { n = 0, ok = 0 }
     side.n = side.n + 1
-    if a.ok then
+    if good_input then
       side.ok = side.ok + 1
     end
     m.sides[a.side or "?"] = side

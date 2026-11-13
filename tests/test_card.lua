@@ -173,6 +173,18 @@ return {
     end,
   },
   {
+    "refused by the game (a fireball on screen): grey, not red, and a clean input still says CLEAN",
+    function()
+      local a = attempt(CLEAN)
+      a.ok, a.error = false, { code = "not_allowed", text = "refused" }
+      T.eq(card.kind(a), "refused")
+      local c = drawn(a)
+      T.eq(c:has_line(COL.bad), false, "no red")
+      T.truthy(c:has_text("CLEAN"), "clean input")
+      T.truthy(c:has_text("GAME REFUSED"), "reason")
+    end,
+  },
+  {
     "pearls: one per attempt, the shown one lifted",
     function()
       local list = { attempt(CLEAN), attempt(SKIP), attempt(CLEAN) }

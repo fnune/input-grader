@@ -20,7 +20,6 @@
 <div class="bar">
   <span>Scale</span><span id="scales"></span>
   <span>Position</span><span id="positions"></span>
-  <span>Star</span><span id="stars"></span>
   <span>Shown pearl</span><span id="pearls"></span>
   <span>Fightcade input display</span><span id="history"></span>
 <span>Show</span><span id="toggles"></span>
@@ -226,44 +225,17 @@ function neutralIcon(x, y, size) {
 
 // A 9x9 pixel star, outlined in black so it reads over the box edge.
 // "#" gold. Placed so the box border runs into the right leg, never between the legs.
-// Star candidates, to pick from in the story view. "H" highlight, "Y" gold, "S" shadow.
-const STARS = {
-  A: [
-    ".....H.....",
-    "....HYY....",
-    "....HYS....",
-    "HHHHHYYYYSS",
-    ".HYYYYYYYS.",
-    "..HYYYYYS..",
-    "..YYYYYYS..",
-    ".YYYS.YYYS.",
-    ".YYS...YSS.",
-    "YS.......SS",
-  ],
-  B: [
-    ".....H.....",
-    "....HYY....",
-    "...HYYYS...",
-    "HHHHYYYYYSS",
-    ".HYYYYYYYS.",
-    "..YYYYYYS..",
-    "..YYYYYYS..",
-    ".YYYS.YYYS.",
-    ".YYS...YSS.",
-    "..S.....S..",
-  ],
-  C: [
-    "....H....",
-    "....H....",
-    "...HYS...",
-    "HHHYYYYSS",
-    ".HYYYYYS.",
-    "..YYYYS..",
-    ".YYYSYYS.",
-    ".YS...SS.",
-  ],
-};
-let STAR = STARS.C;
+// The star for CLEAN and FRAME-PERFECT. "H" highlight, "Y" gold, "S" shadow.
+const STAR = [
+  "....H....",
+  "....H....",
+  "...HYS...",
+  "HHHYYYYSS",
+  ".HYYYYYS.",
+  "..YYYYS..",
+  ".YYYSYYS.",
+  ".YS...SS.",
+];
 // "H" highlight, "Y" gold, "S" shadow; the outline is drawn round it in black.
 function star(x, y) {
   const colour = { H: 0xFFF2A8FF, Y: COL.gold, S: 0xD9921EFF };
@@ -640,7 +612,7 @@ function drawPearlStory() {
   const kinds = ["missed", "out", "clean", "perfect"];
   const labels = ["MISSED", "OUT", "CLEAN", "FRAME-PERFECT"];
   const x0 = 60, y0 = 80;
-  rbox(x0 - 8, y0 - 22, x0 + 260, y0 + 52, 0x10101890, COL.edge);
+  rbox(x0 - 8, y0 - 22, x0 + 260, y0 + 30, 0x10101890, COL.edge);
   gui.text(x0, y0 - 16, "PEARL STORY: NORMAL, THEN SELECTED", COL.text);
   kinds.forEach((kind, col) => {
     const cx = x0 + col * 62;
@@ -648,14 +620,6 @@ function drawPearlStory() {
     drawPearl(kind, cx + 4, y0, 5);
     liftShadow(cx + 17, y0 + 5);
     drawPearl(kind, cx + 16, y0 - 1, 7);
-  });
-  gui.text(x0, y0 + 34, "STARS", COL.text);
-  ["A", "B", "C"].forEach((k, i) => {
-    const keep = STAR;
-    STAR = STARS[k];
-    gui.text(x0 + 40 + i * 50, y0 + 40, k, COL.dim);
-    star(x0 + 50 + i * 50, y0 + 34);
-    STAR = keep;
   });
 }
 
@@ -735,13 +699,12 @@ function drawPicker(moves, selected) {
 }
 
 // ---- Page controls ----
-const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null, pearlStyle: "bigger", mark: "spark", story: false, star: "C" };
+const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "on", browse: true, picker: false, pick: null, pearlStyle: "bigger", mark: "spark", story: false };
 function render() {
   const cv = document.getElementById("screen");
   cv.style.width = W * state.scale + "px"; cv.style.height = H * state.scale + "px";
   ctx.clearRect(0, 0, W, H);
   if (bg.complete) ctx.drawImage(bg, 0, 0);
-  STAR = STARS[state.star];
   if (state.story) {
     drawPearlStory();
     const c = cv.getContext("2d"); c.clearRect(0, 0, W, H); c.drawImage(fb, 0, 0);
@@ -776,7 +739,6 @@ buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
 buttons("positions", "position", ["bottom", "middle", "top"]);
 buttons("history", "history", ["off", "on"]);
 buttons("pearls", "pearlStyle", ["bigger", "caret", "dim", "bigger+dim"]);
-buttons("stars", "star", ["A", "B", "C"]);
 const tg = document.getElementById("toggles");
 for (const k of ["browse", "picker", "story"]) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";

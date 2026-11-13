@@ -541,24 +541,45 @@ function drawHistory(box, attempts, shown) {
   gui.text(x + 2, y - 2, back === 0 ? "LIVE" : `-${back}`, back === 0 ? COL.dim : COL.text);
 }
 
-// The target picker (Alt+8): every move of the character, the selected one highlighted. Moves
-// without a button (dashes, parries) are listed too: they are graded only while targeted.
+// The target picker (Alt+8). Specials and super arts first, then the moves without a button
+// (dashes, jumps, parries), which are graded only while targeted. Duplicates are merged and only
+// real notation is drawn as icons. Scrolls to keep the selection in view.
+function pickerRows(moves) {
+  const seen = new Set(), main = [], other = [];
+  for (const m of moves) {
+    const key = m.name + "|" + m.notation;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const notation = /^[\d\[\]]+(\+[PK]{1,2})?$/.test(m.notation) || /^\d{3}\+[PK]$/.test(m.notation) ? m.notation : "";
+    (m.buttonless || m.slot < 20 ? other : main).push({ id: m.id, name: m.name, notation });
+  }
+  return [{ name: "ALL MOVES", notation: "" }].concat(main, [{ divider: true }], other);
+}
+
 function drawPicker(moves, selected) {
-  const rows = [{ name: "ALL MOVES", notation: "" }].concat(moves);
-  const x0 = 44, y0 = 40, rowH = 11;
-  const shown = rows.slice(0, 14);
-  const width = 150, height = 14 + shown.length * rowH;
+  const rows = pickerRows(moves);
+  const selectable = rows.filter(r => !r.divider);
+  const selRow = rows.indexOf(selectable[Math.max(0, Math.min(selected, selectable.length - 1))]);
+  const VISIBLE = 13, rowH = 11, x0 = 44, y0 = 40, width = 230;
+  const first = Math.max(0, Math.min(selRow - 6, rows.length - VISIBLE));
+  const shown = rows.slice(first, first + VISIBLE);
+  const height = 16 + shown.length * rowH;
   rbox(x0, y0, x0 + width, y0 + height, COL.panel, COL.edge);
   gui.text(x0 + 5, y0 + 4, "TARGET", COL.text);
-  gui.text(x0 + width - 4 - 4 * 11, y0 + 4, "ALT+8 NEXT", COL.dim);
+  gui.text(x0 + width - 4 - 4 * 10, y0 + 4, "ALT+8 NEXT", COL.dim);
   shown.forEach((m, i) => {
-    const y = y0 + 14 + i * rowH;
-    if (i === selected) {
-      rbox(x0 + 2, y - 2, x0 + width - 2, y + rowH - 3, 0xFFFFFF20, COL.text);
+    const y = y0 + 16 + i * rowH;
+    if (m.divider) {
+      gui.line(x0 + 6, y + 3, x0 + width - 6, y + 3, COL.edge);
+      gui.text(x0 + 8, y, "OTHER MOVES", COL.dim);
+      return;
     }
-    const x = inline(x0 + 15, y, m.notation ? notationParts(m.notation) : [], COL.text);
-    gui.text(Math.max(x + 4, x0 + 62), y, m.name.toUpperCase(), i === selected ? COL.text : COL.dim);
+    const isSel = first + i === selRow;
+    if (isSel) rbox(x0 + 2, y - 2, x0 + width - 2, y + rowH - 3, 0xFFFFFF20, COL.text);
+    inline(x0 + 6, y, m.notation ? notationParts(m.notation) : [], COL.text);
+    gui.text(x0 + 82, y, m.name.toUpperCase(), isSel ? COL.text : COL.dim);
   });
+  if (first + VISIBLE < rows.length) gui.text(x0 + width / 2 - 4, y0 + height - 4, "...", COL.dim);
 }
 
 // ---- Page controls ----
@@ -573,7 +594,8 @@ function render() {
   if (state.browse) drawHistory(box, SCENARIOS.map(x => x.attempt), state.scenario);
   if (state.picker) {
     const moves = sc.moves || [];
-    const current = sc.target ? moves.findIndex(m => m.id === sc.target) + 1 : 0;
+    const selectable = pickerRows(moves).filter(r => !r.divider);
+    const current = sc.target ? Math.max(0, selectable.findIndex(m => m.id === sc.target)) : 0;
     drawPicker(moves, state.pick === null ? current : state.pick);
   }
   const c = cv.getContext("2d"); c.clearRect(0, 0, W, H); c.drawImage(fb, 0, 0);
@@ -601,7 +623,7 @@ document.addEventListener("keydown", e => {
   if (e.key === "PageUp" && state.scenario > 0) { state.scenario--; state.pick = null; }
   else if (e.key === "PageDown" && state.scenario < SCENARIOS.length - 1) { state.scenario++; state.pick = null; }
   else if (state.picker && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-    const n = (SCENARIOS[state.scenario].moves || []).length + 1;
+    const n = pickerRows(SCENARIOS[state.scenario].moves || []).filter(r => !r.divider).length;
     const cur = state.pick === null ? 0 : state.pick;
     state.pick = (cur + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
   } else return;

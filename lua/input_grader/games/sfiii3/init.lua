@@ -15,7 +15,8 @@ local M = {}
 M.SUPPORTED = { sfiii3nr1 = true, sfiii3n = true }
 
 --- @param platform table see lua/input_grader/platform/fbneo.lua
---- @param options table|nil { player = 1|2, log_path = string|nil, overlay = table|nil }
+--- @param options table|nil { player = 1|2, log_path = string|nil, overlay = table|nil,
+---   avoid = fn() -> rectangles|nil }
 function M.build(platform, options)
   options = options or {}
   if not M.SUPPORTED[platform.romname] then
@@ -32,6 +33,7 @@ function M.build(platform, options)
     timestamp = platform.timestamp,
     log = options.log_path and platform.appender(options.log_path, csv.HEADER) or nil,
     overlay = Overlay.new(options.overlay),
+    avoid = options.avoid,
   })
 end
 

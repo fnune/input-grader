@@ -413,7 +413,35 @@ function Game:grade(p)
   if not attempt.ok then
     attempt.error = self:diagnose(p, pick)
   end
+  attempt.trace = self:trace(p, pick)
   return attempt
+end
+
+--- Per-frame inputs around the attempt, for drawing it on a time axis. Frame numbers are
+--- relative to the first frame of `frames` (1-based), so the record stays game-agnostic.
+function Game:trace(p, pick)
+  local record, run = pick.record, pick.run
+  local first = math.max((run.steps[1] or run.start) - 4, 1)
+  local last = math.max(p.frame, run.complete or 0) + 4
+  local trace = { frames = {}, steps = {} }
+  for _, h in ipairs(self.history:range(first, last)) do
+    table.insert(trace.frames, { dir = inputs.lever_to_numpad(h.lever), press = inputs.buttons_text(h.pressed) })
+  end
+  local origin = first - 1
+  for k, step in ipairs(record.steps) do
+    local s = { label = step_label(step) }
+    if run.steps[k] then
+      s.at = run.steps[k] - origin
+    end
+    if k > 1 and TIMED[step[1]] and step[2] > 0 then
+      s.window = step[2]
+    end
+    table.insert(trace.steps, s)
+  end
+  trace.button_at = p.frame - origin
+  trace.button_window = record.reset - 2
+  trace.complete_at = run.complete and (run.complete - origin) or nil
+  return trace
 end
 
 Game.step_label = step_label

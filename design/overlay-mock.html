@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Overlay mock</title>
+<style>
+  body { background: #1b1b1f; color: #ddd; font: 14px/1.4 system-ui, sans-serif; margin: 16px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-bottom: 12px; }
+  button { background: #2c2c33; color: #ddd; border: 1px solid #444; border-radius: 4px; padding: 4px 9px; cursor: pointer; }
+  button.on { background: #3d5a80; border-color: #6d8ab0; color: #fff; }
+  canvas { image-rendering: pixelated; display: block; border: 1px solid #333; }
+  .note { color: #999; max-width: 1152px; margin-top: 10px; }
+  code { color: #e8c07d; }
+</style>
+<script src="fbneo_font.js"></script>
+<script src="scenarios.js"></script>
+</head>
+<body>
+<div class="bar" id="scenarios"></div>
+<div class="bar">
+  <span>Scale</span><span id="scales"></span>
+  <span>Position</span><span id="positions"></span>
+  <span>Training input history</span><span id="history"></span>
+  <span>Show</span><span id="toggles"></span>
+</div>
+<canvas id="screen" width="384" height="224"></canvas>
+<p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (3rd_training_lua's own icons, read from <code>vendor/</code>) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
+
+<script>
+// ---- A stand-in for FBNeo's gui library: same calls, same coordinates, RGBA colours. ----
+const W = 384, H = 224;
+const fb = document.createElement("canvas"); fb.width = W; fb.height = H;
+const ctx = fb.getContext("2d");
+const bg = new Image(); bg.src = "background.png";
+// 3rd_training_lua's icons, read from the local checkout at runtime exactly as the launcher will.
+const ICON_DIR = "../vendor/3rd_training_lua/images/";
+const IMG = {};
+const iconNames = [];
+for (let d = 1; d <= 9; d++) { iconNames.push(["dir_big_" + d, "big/" + d + "_dir.png"], ["dir_small_" + d, "small/" + d + "_dir.png"]); }
+for (const b of ["LP", "MP", "HP", "LK", "MK", "HK"]) iconNames.push(["btn_" + b, "small/" + b + "_button.png"]);
+for (const [key, file] of iconNames) { const im = new Image(); im.onload = () => render(); im.src = ICON_DIR + file; IMG[key] = im; }
+
+function rgba(c) { return `rgba(${c >>> 24 & 255},${c >>> 16 & 255},${c >>> 8 & 255},${(c & 255) / 255})`; }
+function px(x, y, c) { if (x < 0 || y < 0 || x >= W || y >= H) return; ctx.fillStyle = rgba(c); ctx.fillRect(x, y, 1, 1); }
+const gui = {
+  pixel: px,
+  // FBNeo's box: inclusive corners, fill inside, outline on the border.
+  box(x1, y1, x2, y2, fill, outline) {
+    [x1, x2] = [Math.min(x1, x2), Math.max(x1, x2)]; [y1, y2] = [Math.min(y1, y2), Math.max(y1, y2)];
+    ctx.fillStyle = rgba(fill); ctx.fillRect(x1 + 1, y1 + 1, x2 - x1 - 1, y2 - y1 - 1);
+    if (outline === undefined) outline = fill | 0xFF;
+    for (let x = x1; x <= x2; x++) { px(x, y1, outline); px(x, y2, outline); }
+    for (let y = y1 + 1; y < y2; y++) { px(x1, y, outline); px(x2, y, outline); }
+  },
+  line(x1, y1, x2, y2, c) {
+    let dx = Math.abs(x2 - x1), dy = -Math.abs(y2 - y1), sx = x1 < x2 ? 1 : -1, sy = y1 < y2 ? 1 : -1, e = dx + dy;
+    for (;;) { px(x1, y1, c); if (x1 === x2 && y1 === y2) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x1 += sx; } if (e2 <= dx) { e += dx; y1 += sy; } }
+  },
+  // gui.image(x, y, gdStr): a PNG at its own size.
+  image(x, y, key) { const im = IMG[key]; if (im && im.complete && im.naturalWidth) ctx.drawImage(im, x, y); },
+  text(x, y, s, color = 0xFFFFFFFF, outline = 0x000000FF) {
+    for (const ch of String(s)) {
+      const g = FBNEO_FONT[ch.charCodeAt(0) - 32];
+      if (g) {
+        const on = (gx, gy) => gx >= 0 && gx < 4 && gy >= 0 && gy < 7 && (g[gy] >> gx & 1);
+        for (let gy = -1; gy < 8; gy++) for (let gx = -1; gx < 5; gx++) {
+          if (on(gx, gy)) px(x + gx, y + gy, color);
+          else if (outline & 255) { let n = false; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) n = n || on(gx + a, gy + b); if (n) px(x + gx, y + gy, outline); }
+        }
+      }
+      x += 4;
+    }
+  },
+};
+
+// ---- The overlay: plain drawing code meant to port line for line to Lua. ----
+const COL = {
+  panel: 0x101018C8, edge: 0x5A5A6AFF, dim: 0x8A8A9AFF, text: 0xFFFFFFFF,
+  good: 0x4CD964FF, bad: 0xFF5A5AFF, warn: 0xFFCC33FF, button: 0xFFCC33FF,
+  window: 0xFFFFFF30, windowEdge: 0xFFFFFF70, buttonWindow: 0x4CD96440, cell: 0x2A2A36FF, cellHit: 0x2E5A3AFF,
+};
+
+const LAYOUT = { W: 384, MARGIN: 8, GAP: 4, COMPACT_BELOW: 300 };
+function panelFit(y1, y2, avoid) {
+  let x1 = LAYOUT.MARGIN, x2 = LAYOUT.W - LAYOUT.MARGIN;
+  for (const r of avoid) {
+    if (r.y1 <= y2 && r.y2 >= y1) {
+      if ((r.x1 + r.x2) / 2 < LAYOUT.W / 2) x1 = Math.max(x1, r.x2 + LAYOUT.GAP);
+      else x2 = Math.min(x2, r.x1 - LAYOUT.GAP);
+    }
+  }
+  return { x1, x2, compact: x2 - x1 < LAYOUT.COMPACT_BELOW };
+}
+
+// The training script's input history column, drawn the way src/input_history.lua does:
+// newest entry on top, one 10 px row each, direction icon then buttons, frames held on the left.
+function trainingHistory(a, side) {
+  const runs = [];
+  for (const f of a.trace.frames) {
+    const last = runs[runs.length - 1];
+    if (last && last.dir === f.dir && !f.press) last.n++; else runs.push({ dir: f.dir, press: f.press, n: 1 });
+  }
+  const rows = runs.reverse().slice(0, 15);
+  while (rows.length < 15) rows.push({ dir: 5, press: "", n: 40 + rows.length * 7 });
+  const right = side === "right", x = right ? LAYOUT.W - 4 : 4;
+  rows.forEach((r, j) => {
+    const y = 49 + j * 10, sign = right ? -1 : 1, cx = x + 14 * sign + (right ? -9 : 0);
+    gui.image(cx, y, "dir_small_" + r.dir);
+    let bx = cx + sign * 11;
+    for (const b of (r.press.match(/[LMH][PK]/g) || [])) { gui.image(right ? bx - 9 : bx, y, "btn_" + b); bx += sign * 8; }
+    const t = String(r.n);
+    gui.text(right ? x - 11 : x + (r.n >= 100 ? 0 : r.n >= 10 ? 4 : 8), y + 1, t, 0xd6e3efff, 0x101000ff);
+  });
+  return { x1: right ? LAYOUT.W - 82 : 0, y1: 49, x2: right ? LAYOUT.W : 82, y2: 49 + rows.length * 10 };
+}
+
+function dirVec(d) { return [((d - 1) % 3) - 1, -(Math.floor((d - 1) / 3) - 1)]; }
+
+// An arrow for a numpad direction, centred on (cx, cy), about 2r+1 pixels across.
+function arrow(cx, cy, d, r, c) {
+  const [vx, vy] = dirVec(d);
+  if (vx === 0 && vy === 0) { gui.box(cx - 1, cy - 1, cx + 1, cy + 1, c, c); return; }
+  const tx = cx + vx * r, ty = cy + vy * r;
+  gui.line(cx - vx * r, cy - vy * r, tx, ty, c);
+  if (vx === 0 || vy === 0) gui.line(cx - vx * r + vy, cy - vy * r + vx, tx + vy, ty + vx, c);
+  const h = Math.max(2, r - 1);
+  // Arrowhead: the two directions 45 degrees either side of pointing back.
+  const back = [[-vx - vy, -vy + vx], [-vx + vy, -vy - vx]];
+  for (const [bx, by] of back) {
+    const n = Math.max(Math.abs(bx), Math.abs(by));
+    gui.line(tx, ty, tx + Math.round(bx / n * h), ty + Math.round(by / n * h), c);
+  }
+}
+
+function badge(x, y, ok) {
+  const c = ok ? COL.good : COL.bad;
+  gui.box(x, y, x + 15, y + 15, (c & 0xFFFFFF00) | 0x50, c);
+  if (ok) { gui.line(x + 3, y + 8, x + 6, y + 11, c); gui.line(x + 6, y + 11, x + 12, y + 4, c); gui.line(x + 3, y + 9, x + 6, y + 12, c); gui.line(x + 6, y + 12, x + 12, y + 5, c); }
+  else { gui.line(x + 4, y + 4, x + 11, y + 11, c); gui.line(x + 11, y + 4, x + 4, y + 11, c); gui.line(x + 5, y + 4, x + 12, y + 11, c); gui.line(x + 12, y + 4, x + 5, y + 11, c); }
+}
+
+const SHORT = { skipped_step: "SKIPPED", too_slow: "TOO SLOW", early_button: "EARLY", late_button: "LATE",
+  cancelled: "CANCELLED", missing_step: "INCOMPLETE", other_move: "OTHER MOVE", not_allowed: "REFUSED" };
+
+// The step the miss is about, and a 2-4 word reason. Derived from the attempt, as the Lua will.
+function reason(a) {
+  if (a.ok) return { text: `${a.total}F  (MIN ${a.minimum}F)` };
+  const t = a.trace, code = a.error.code;
+  const k = t.steps.findIndex(s => s.at === undefined);
+  const label = k >= 0 ? t.steps[k].label : null;
+  const n = (a.error.text.match(/(\d+) frames?/) || [])[1];
+  if (code === "skipped_step") return { text: `NO ${label}`, step: k };
+  if (code === "too_slow") return { text: `${label} +${n}F LATE`, step: k };
+  if (code === "late_button") return { text: `BUTTON +${n}F LATE` };
+  if (code === "early_button") return { text: label ? `BUTTON BEFORE ${label}` : `BUTTON ${n}F EARLY`, step: k };
+  if (code === "cancelled") return { text: `UP CANCELLED IT`, step: k };
+  return { text: SHORT[code] || code, step: k };
+}
+
+function drawLane(a, opt) {
+  const t = a.trace, n = t.frames.length;
+  const y0 = opt.position === "top" ? 44 : opt.position === "middle" ? 104 : 150;
+  const avoid = opt.history !== "off" ? [trainingHistory(a, opt.history)] : [];
+  const fit = panelFit(y0, y0 + 60, avoid), compact = fit.compact;
+  const x0 = fit.x1, x1 = fit.x2;
+  const showInputs = opt.inputs && !compact;
+  const height = 42 + (showInputs ? 10 : 0) + (opt.ruler ? 8 : 0);
+  gui.box(x0, y0, x1, y0 + height, COL.panel, COL.edge);
+
+  // Left: verdict badge, the move, and the reason.
+  const ok = a.ok, accent = ok ? COL.good : COL.bad;
+  badge(x0 + 4, y0 + 4, ok);
+  const r = reason(a);
+  if (compact) {
+    // Compact: the move name goes, the reason sits under the lane.
+    gui.text(x0 + 4, y0 + 23, a.notation, COL.dim);
+  } else {
+    gui.text(x0 + 24, y0 + 5, a.move.toUpperCase(), COL.text);
+    gui.text(x0 + 24, y0 + 13, a.notation, COL.dim);
+    gui.text(x0 + 4, y0 + 24, r.text, ok ? COL.dim : COL.warn);
+  }
+
+  // Right: the lane, one column per frame.
+  const lx = x0 + (compact ? 26 : 104), lw = x1 - 4 - lx;
+  const fw = Math.max(3, Math.min(14, Math.floor(lw / n)));
+  const X = f => lx + (f - 1) * fw + Math.floor(fw / 2);
+  let y = y0 + 4;
+
+  // Row: windows and the target arrows where each step landed.
+  const ay = y + 6;
+  t.steps.forEach((s, k) => {
+    const prev = t.steps[k - 1];
+    if (s.window && prev && prev.at !== undefined) {
+      const wx1 = X(prev.at), wx2 = Math.min(X(prev.at + s.window), x1 - 4);
+      gui.box(wx1, ay + 9, wx2, ay + 10, COL.window, COL.window);
+      gui.line(wx2, ay + 7, wx2, ay + 12, COL.windowEdge);
+    }
+  });
+  if (t.complete_at !== undefined && t.complete_at !== null) {
+    const bx1 = X(t.complete_at), bx2 = Math.min(X(t.complete_at + t.button_window), x1 - 4);
+    gui.box(bx1, ay + 9, bx2, ay + 10, COL.buttonWindow, COL.buttonWindow);
+    gui.line(bx2, ay + 7, bx2, ay + 12, COL.good);
+  }
+  t.steps.forEach((s, k) => {
+    const d = Number(s.label);
+    if (isNaN(d)) return;
+    if (s.at !== undefined) {
+      const late = !ok && r.step === k, c = late ? COL.bad : COL.good;
+      gui.box(X(s.at) - 6, ay - 6, X(s.at) + 6, ay + 6, (c & 0xFFFFFF00) | 0x40, c);
+      if (opt.icons) gui.image(X(s.at) - 5, ay - 5, "dir_big_" + d); else arrow(X(s.at), ay, d, 3, c);
+    } else {
+      // Not accepted: where that direction actually arrived after the previous step, dimmed,
+      // and for the step the miss is about, a red ghost if it never came at all.
+      const prev = t.steps[k - 1];
+      const from = prev && prev.at !== undefined ? prev.at + 1 : 1;
+      const seenAt = (r.step >= 0 && k > r.step) ? 0 : t.frames.findIndex((f, i) => i + 1 >= from && f.dir === d) + 1;
+      if (seenAt > 0) {
+        const c = k === r.step ? COL.bad : COL.dim;
+        gui.box(X(seenAt) - 6, ay - 6, X(seenAt) + 6, ay + 6, 0x00000000, c);
+        if (opt.icons) gui.image(X(seenAt) - 5, ay - 5, "dir_big_" + d); else arrow(X(seenAt), ay, d, 3, c);
+      } else if (k === r.step) {
+        const later = t.steps.slice(k + 1).map(x => t.frames.findIndex((fr, i) => i + 1 >= from && fr.dir === Number(x.label)) + 1).find(f => f > 0);
+        const next = later ? { at: later } : null;
+        const gx = Math.round((X(from) + (next ? X(next.at) : X(t.button_at))) / 2);
+        gui.box(gx - 6, ay - 6, gx + 6, ay + 6, 0x00000000, COL.bad);
+        if (opt.icons) gui.image(gx - 5, ay - 5, "dir_big_" + d); else arrow(gx, ay, d, 3, COL.bad);
+        gui.line(gx - 6, ay + 6, gx + 6, ay - 6, COL.bad);
+      }
+    }
+  });
+  // The steps after a skipped one that did arrive (the 6 of a 2-6 Hadoken), dimmed.
+  if (!ok && a.error.code === "skipped_step" && r.step >= 0) {
+    for (let k = r.step + 1; k < t.steps.length; k++) {
+      const d = Number(t.steps[k].label);
+      const f = t.frames.findIndex((fr, i) => i + 1 > (t.steps[r.step - 1]?.at || 0) && fr.dir === d) + 1;
+      if (f > 0 && t.steps[k].at === undefined) {
+        gui.box(X(f) - 6, ay - 6, X(f) + 6, ay + 6, 0x00000000, COL.dim);
+        if (opt.icons) gui.image(X(f) - 5, ay - 5, "dir_big_" + d); else arrow(X(f), ay, d, 3, COL.dim);
+      }
+    }
+  }
+  // The button.
+  const bxp = X(t.button_at);
+  const bc = ok ? COL.good : (r.text.startsWith("BUTTON") ? COL.bad : COL.button);
+  // The button, on its own row under the directions, at the frame it was pressed.
+  const by = ay + 16;
+  gui.box(bxp - 6, by - 6, bxp + 6, by + 6, (bc & 0xFFFFFF00) | 0x40, bc);
+  const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
+  if (opt.icons && btn) gui.image(bxp - 4, by - 4, "btn_" + btn); else gui.text(bxp - 3, by - 3, a.button.label[1] || "?", COL.text, 0);
+  y = by + 8;
+  if (compact) gui.text(x0 + 4, y0 + 32, r.text, ok ? COL.dim : COL.warn);
+
+  // Row: what the stick actually did, one cell per frame.
+  if (showInputs) {
+    const hit = new Set(t.steps.filter(s => s.at !== undefined).map(s => s.at));
+    t.frames.forEach((f, i) => {
+      const cx = lx + i * fw;
+      gui.box(cx, y, cx + fw - 2, y + 7, hit.has(i + 1) ? COL.cellHit : COL.cell, hit.has(i + 1) ? COL.cellHit : COL.cell);
+      const [vx, vy] = dirVec(f.dir), mx = cx + Math.floor((fw - 2) / 2), my = y + 3;
+      if (f.dir !== 5) { gui.line(mx, my, mx + vx * 2, my + vy * 2, COL.text); }
+      else gui.pixel(mx, my, COL.dim);
+      if (f.press) gui.box(cx, y + 6, cx + fw - 2, y + 7, COL.button, COL.button);
+    });
+    y += 10;
+  }
+
+  // Row: a frame ruler, a tick every frame and a number every 5.
+  if (opt.ruler) {
+    for (let f = 1; f <= n; f++) {
+      gui.pixel(X(f), y, COL.dim);
+      if ((f - 1) % 5 === 0) { gui.line(X(f), y, X(f), y + 2, COL.dim); }
+    }
+    gui.text(x1 - 4 - 4 * 7, y + 1, `${fw}PX/F`, COL.dim, 0);
+  }
+}
+
+// ---- Page controls ----
+const state = { scenario: 1, scale: 3, position: "bottom", inputs: true, ruler: false, icons: true, history: "left" };
+function render() {
+  const cv = document.getElementById("screen");
+  cv.style.width = W * state.scale + "px"; cv.style.height = H * state.scale + "px";
+  ctx.clearRect(0, 0, W, H);
+  if (bg.complete) ctx.drawImage(bg, 0, 0);
+  drawLane(SCENARIOS[state.scenario].attempt, state);
+  const c = cv.getContext("2d"); c.clearRect(0, 0, W, H); c.drawImage(fb, 0, 0);
+  for (const el of document.querySelectorAll("[data-k]")) el.classList.toggle("on", String(state[el.dataset.k]) === el.dataset.v);
+}
+function buttons(id, key, values, label = v => v) {
+  const host = document.getElementById(id);
+  for (const v of values) {
+    const b = document.createElement("button"); b.textContent = label(v); b.dataset.k = key; b.dataset.v = String(v);
+    b.onclick = () => { state[key] = typeof state[key] === "boolean" ? !state[key] : v; render(); };
+    host.appendChild(b);
+  }
+}
+buttons("scenarios", "scenario", SCENARIOS.map((_, i) => i), i => SCENARIOS[i].name);
+buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
+buttons("positions", "position", ["bottom", "middle", "top"]);
+buttons("history", "history", ["off", "left", "right"]);
+const tg = document.getElementById("toggles");
+for (const k of ["icons", "inputs", "ruler"]) {
+  const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";
+  b.onclick = () => { state[k] = !state[k]; render(); }; tg.appendChild(b);
+}
+bg.onload = render; render();
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ local files = {
   "test_bench",
   "test_overlay",
   "test_launcher",
+  "test_layout",
 }
 
 local passed, failed = 0, {}

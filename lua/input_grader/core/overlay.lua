@@ -3,6 +3,8 @@
 -- Colors are names ("text", "dim", "good", "bad", "warn", "panel", "edge") that each platform
 -- maps to its own format. Game-agnostic: it only reads attempt and bench-summary records.
 
+local layout = require("input_grader.core.layout")
+
 local Overlay = {}
 Overlay.__index = Overlay
 
@@ -110,7 +112,8 @@ function Overlay.bench_lines(summary)
   return lines
 end
 
---- @param view table { attempt, attempt_age (seconds), bench (summary or nil), help (string or nil), target_name }
+--- @param view table { attempt, attempt_age (seconds), bench (summary or nil), help (string or nil),
+---   target_name, avoid (rectangles to keep clear) }
 function Overlay:draw(canvas, view)
   local c = self.config
   local lines = {}
@@ -143,9 +146,16 @@ function Overlay:draw(canvas, view)
   end
   local height = #lines * c.line_h + 6
   local y0 = c.y
-  canvas:box(c.x, y0, c.x + c.width, y0 + height, "panel", "edge")
+  local fit = layout.panel(y0, y0 + height, view.avoid)
+  local x1, x2 = math.max(c.x, fit.x1), math.min(c.x + c.width, fit.x2)
+  local max_chars = math.floor((x2 - x1 - 8) / c.char_w)
+  canvas:box(x1, y0, x2, y0 + height, "panel", "edge")
   for i, l in ipairs(lines) do
-    canvas:text(c.x + 4, y0 + 4 + (i - 1) * c.line_h, l[1], l[2])
+    local text = l[1]
+    if #text > max_chars then
+      text = text:sub(1, math.max(max_chars - 1, 0)) .. "~"
+    end
+    canvas:text(x1 + 4, y0 + 4 + (i - 1) * c.line_h, text, l[2])
   end
 end
 

@@ -12,7 +12,7 @@ A 10-minute check that the riskiest parts of the overlay work inside Fightcade's
 | memory | 3rd Strike's RAM reads work (P1's character and the match state) |
 | icon sheet | Fightcade training mode's icon sheet can be found and resampled with `gd` |
 | draw speed | How long a sample card takes to draw, against the 16.7 ms of a frame |
-| hotkey Alt+6 | Lua hotkeys work |
+| menu toggle | A menu opens on the M key (read directly), or on Lua Hotkey 6 if mapped |
 | joypad, keyboard | The stick, buttons and keyboard can be read |
 | menu select, menu block | A menu can be driven with the stick while P1's character stands still |
 
@@ -29,8 +29,8 @@ A 10-minute check that the riskiest parts of the overlay work inside Fightcade's
 
 2. Start Fightcade and open 3rd Strike in Test Game (offline). Get into a match with Ryu against anyone.
 3. **Game > Lua Scripting > New Lua Script Window > Browse**, pick `smoke_test.lua` in this repository, then **Run**. A checklist appears at the top of the screen and a sample card at the bottom.
-4. Press **Alt+6**: a small menu opens on the right. Move the stick up and down, press **LP**, then wait 2 seconds without touching anything.
-5. Press **Alt+6** again to close it, walk around a bit, and press any key on the keyboard.
+4. Press **M** on the keyboard: a small menu opens on the right. Move the stick up and down, press **LP**, then wait 2 seconds without touching anything.
+5. Press **M** again to close it.
 6. Take a screenshot if something looks wrong, close the Lua window, and say it's done: the results are in `logs/smoke-test.txt`.
 
 Loading this script stops any other Lua script, including Fightcade's training mode. That is expected; running next to the training mode is the next step after this one.

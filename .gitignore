@@ -10,3 +10,5 @@ inp/
 *.csv
 __pycache__/
 result
+logs/*
+!logs/.gitkeep

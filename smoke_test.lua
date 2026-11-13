@@ -6,6 +6,7 @@
 -- Steps for the person running it are on screen; see also docs/smoke-test.md.
 
 local results, order = {}, {}
+local write_log
 local lines_out = {}
 
 local function log(s)
@@ -20,9 +21,12 @@ local function check(name, fn)
   end
   results[name] = { ok = ok and detail ~= false, detail = ok and tostring(detail) or ("error: " .. tostring(detail)) }
   log(string.format("%-14s %s  %s", name, results[name].ok and "OK  " or "FAIL", results[name].detail))
+  if write_log then
+    write_log()
+  end
 end
 
-local function write_log()
+write_log = function()
   local f = io.open("logs/smoke-test.txt", "w")
   if not f then
     print("smoke: could not write logs/smoke-test.txt (is logs/ writable for Fightcade?)")
@@ -34,8 +38,14 @@ end
 
 -- 1. Environment --------------------------------------------------------------------------------
 
+-- Fightcade's FBNeo ships gd as a module (gd.dll next to the emulator), not as a global.
+local gd_ok, gd = pcall(require, "gd")
+if not gd_ok then
+  gd = nil
+end
+
 check("lua", function()
-  return _VERSION .. ", bit " .. tostring(type(bit) == "table") .. ", gd " .. tostring(type(gd) == "table")
+  return _VERSION .. ", bit " .. tostring(type(bit) == "table") .. ", gd " .. tostring(gd ~= nil)
 end)
 check("rom", function()
   local name = emu.romname()
@@ -60,6 +70,8 @@ check("memory", function()
   local state = memory.readbyte(0x020154A7)
   return string.format("P1 character row %d (Ryu is 2), match state %d (2 = fighting)", row, state)
 end)
+
+local reported_match = false
 
 -- 3. Fightcade's icon sheet through gd ------------------------------------------------------------
 
@@ -169,15 +181,19 @@ end)
 
 local seen_joypad, seen_keys = {}, {}
 local menu_open, menu_sel, menu_frozen_frames = false, 1, 0
-local prev = {}
+local prev, prev_m = {}, false
 local MENU = { "HADOKEN", "SHORYUKEN", "TATSUMAKI", "FORWARD DASH" }
 
-input.registerhotkey(6, function()
+-- FBNeo's Lua hotkeys are game inputs the player must map (Input > Map game inputs > Lua Hotkey
+-- 6); nothing is mapped by default. The M key, read directly, works without any mapping.
+local function toggle_menu(source)
   menu_open = not menu_open
-  check("hotkey Alt+6", function()
-    return "menu " .. (menu_open and "opened" or "closed")
+  check("menu toggle", function()
+    return "menu " .. (menu_open and "opened" or "closed") .. " with " .. source
   end)
-  write_log()
+end
+input.registerhotkey(6, function()
+  toggle_menu("Lua Hotkey 6")
 end)
 
 emu.registerbefore(function()
@@ -209,6 +225,10 @@ emu.registerafter(function()
     end
   end
   local keys = input.get()
+  if keys.M and not prev_m then
+    toggle_menu("the M key")
+  end
+  prev_m = keys.M
   for name, down in pairs(keys) do
     if down and not seen_keys[name] then
       seen_keys[name] = true
@@ -221,6 +241,12 @@ emu.registerafter(function()
         return "input.get() saw: " .. table.concat(names, ", ")
       end)
     end
+  end
+  if not reported_match and memory.readbyte(0x020154A7) == 2 then
+    reported_match = true
+    check("match", function()
+      return string.format("in a match: P1 character row %d (Ryu is 2)", memory.readword(P1 + 0x3C0))
+    end)
   end
   if menu_open then
     local function pressed(n)
@@ -257,7 +283,7 @@ gui.register(function()
   sample_card()
   local y = 44
   gui.box(48, y - 2, 300, y + 10 + #order * 8, 0x000000B0, 0x5A5A6AFF)
-  gui.text(52, y, "SMOKE TEST  Alt+6 menu, stick to move, LP pick", GOLD)
+  gui.text(52, y, "SMOKE TEST  M: menu, stick to move, LP pick", GOLD)
   for i, name in ipairs(order) do
     local r = results[name]
     local text = (r.ok and "OK   " or "FAIL ") .. name .. ": " .. r.detail:sub(1, 48)
@@ -272,4 +298,4 @@ gui.register(function()
 end)
 
 write_log()
-log("loaded: press Alt+6, move the stick up and down, press LP, wait 2 s, press Alt+6, press any keyboard key")
+log("loaded: in a match, press M, move the stick up and down, press LP, wait 2 s, press M again")

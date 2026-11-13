@@ -72,4 +72,38 @@ table.insert(cases, {
   end,
 })
 
+table.insert(cases, {
+  "a targeted forward dash is graded from its motion: 6, neutral, 6",
+  function()
+    local found = attempts({ { 5, 4 }, { 6, 1 }, { 5, 2 }, { 6, 1 }, { 5, 20 } }, { target = "ryu:0" })
+    T.eq(#found, 1)
+    T.eq(found[1].move, "forward dash")
+    T.eq(found[1].ok, true)
+    T.eq(found[1].button, nil)
+  end,
+})
+
+table.insert(cases, {
+  "a targeted dash whose second 6 comes too late is a miss",
+  function()
+    local found = attempts({ { 5, 4 }, { 6, 1 }, { 5, 9 }, { 6, 1 }, { 5, 20 } }, { target = "ryu:0" })
+    T.eq(#found, 1)
+    T.eq(found[1].ok, false)
+  end,
+})
+
+table.insert(cases, {
+  "walking forward is not a failed dash, even with the dash as target",
+  function()
+    T.eq(#attempts({ { 5, 4 }, { 6, 40 }, { 5, 20 } }, { target = "ryu:0" }), 0)
+  end,
+})
+
+table.insert(cases, {
+  "dashes are not graded unless targeted",
+  function()
+    T.eq(#attempts({ { 5, 4 }, { 6, 1 }, { 5, 2 }, { 6, 1 }, { 5, 20 } }), 0)
+  end,
+})
+
 return cases

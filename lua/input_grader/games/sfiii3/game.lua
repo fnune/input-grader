@@ -92,17 +92,24 @@ function Game:set_target(id)
   self.options.target = id
 end
 
---- Moves the current character can be graded on, for choosing a bench target.
+--- Moves the current character can be targeted on: specials and super arts, and the moves
+--- without a button (dashes, high jump, parries), which are graded only while targeted.
 function Game:moves()
   local list = {}
   if not self.fighter then
     return list
   end
   for slot, record in pairs(self.fighter.slots) do
-    if slot >= C.SA_GROUND and record.steps[1][1] ~= CK.NONE and band(record.btix, C.BT_INDEX) ~= C.BT_NONE then
+    if self.flags and self.flags[slot] ~= -1 and record.steps[1][1] ~= CK.NONE then
       table.insert(
         list,
-        { id = self.fighter.name .. ":" .. slot, name = record.name, notation = record.notation, slot = slot }
+        {
+          id = self.fighter.name .. ":" .. slot,
+          name = record.name,
+          notation = record.notation,
+          slot = slot,
+          buttonless = band(record.btix, C.BT_INDEX) == C.BT_NONE,
+        }
       )
     end
   end
@@ -149,9 +156,7 @@ function Game:rebuild(obs)
   self.art_slots = selected_art_slots(self.fighter, obs.super_art)
   local tracked = {}
   for slot, record in pairs(self.fighter.slots) do
-    if slot >= C.SA_GROUND then
-      tracked[slot] = record
-    end
+    tracked[slot] = record
   end
   self.tracker = Tracker.new(tracked)
   self.pending = nil
@@ -189,6 +194,10 @@ function Game:update()
   self.tracker:update(obs.state, dead, obs.started and obs.started.slot)
 
   local graded = {}
+  local buttonless = self:buttonless_attempt(obs)
+  if buttonless then
+    table.insert(graded, buttonless)
+  end
   local function finish()
     local attempt = self:grade(self.pending)
     self.pending = nil
@@ -253,8 +262,11 @@ local function evidence(self, record, run, last_frame)
   for k = n + 1, #record.steps do
     local step, found = record.steps[k], nil
     if LEVER_STEPS[step[1]] then
+      -- Only a direction that newly arrives counts: holding 6 is one 6, not two.
       for _, h in ipairs(self.history:range(cursor + 1, last_frame)) do
-        if lever_matches(step, h.lever) then
+        local before = self.history:at(h.frame - 1)
+        local arrived = not before or before.lever ~= h.lever
+        if arrived and lever_matches(step, h.lever) then
           found = h.frame
           break
         end
@@ -411,6 +423,48 @@ function Game:diagnose(p, pick)
   return { code = "missing_step", text = "the game did not accept " .. want }
 end
 
+-- A targeted move without a button (a dash) is an attempt when its motion completes, or when all
+-- but one of its directions came (late ones included) before it fell apart: walking forward, or
+-- a single tap, is not a failed dash. A failure is graded `settle` frames later, so a direction
+-- that came late is in the history to be named.
+function Game:buttonless_attempt(obs)
+  local target = self.options.target
+  local slot = target and tonumber(target:match(":(%d+)$"))
+  local record = slot and self.fighter.slots[slot]
+  if not record or band(record.btix, C.BT_INDEX) ~= C.BT_NONE or not self.tracker.runs[slot] then
+    return nil
+  end
+  local pick = { slot = slot, record = record, id = target }
+  local base = { pressed = 0, facing_right = obs.facing_right, airborne = obs.airborne }
+  self.pending_buttonless = self.pending_buttonless or {}
+  local due = self.pending_buttonless[1]
+  if due and self.frame - due.reset.frame >= self.options.settle then
+    table.remove(self.pending_buttonless, 1)
+    pick.run = due
+    local n = evidence(self, record, due, self.frame)
+    if n >= math.max(2, #record.steps - 1) then
+      base.frame = due.reset.frame
+      return self:grade_pick(base, pick)
+    end
+  end
+  local runs = self.tracker.runs[slot]
+  local run = runs[#runs]
+  if not run or run.graded then
+    return nil
+  end
+  if run.complete == self.frame then
+    run.graded = true
+    pick.run = run
+    base.frame, base.started = self.frame, { slot = slot, strength = 0 }
+    return self:grade_pick(base, pick)
+  end
+  if run.reset and run.reset.frame == self.frame then
+    run.graded = true
+    table.insert(self.pending_buttonless, run)
+  end
+  return nil
+end
+
 function Game:grade(p)
   if not p then
     return nil
@@ -419,6 +473,10 @@ function Game:grade(p)
   if not pick then
     return nil
   end
+  return self:grade_pick(p, pick)
+end
+
+function Game:grade_pick(p, pick)
   local record, run = pick.record, pick.run
   local attempt = {
     game = "sfiii3",
@@ -454,11 +512,17 @@ function Game:grade(p)
   if run.steps[1] then
     attempt.total = p.frame - run.steps[1]
   end
+  if band(record.btix, C.BT_INDEX) == C.BT_NONE then
+    attempt.button = nil
+  end
   attempt.margin = margin
   if not attempt.ok then
     attempt.error = self:diagnose(p, pick)
   end
   attempt.trace = self:trace(p, pick)
+  if not attempt.button then
+    attempt.trace.button_at, attempt.trace.button_window = nil, nil
+  end
   return attempt
 end
 

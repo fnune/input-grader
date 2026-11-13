@@ -1,87 +1,95 @@
 # Input grader
 
-Frame-accurate feedback on special move inputs for Street Fighter III: 3rd Strike, as a Lua overlay for [Fightcade](https://www.fightcade.com/)'s FBNeo. After every attempt it tells you whether the move came out, how many frames each direction took against the window the game allows, and what went wrong when it did not.
+Frame-accurate feedback on special move inputs for Street Fighter III: 3rd Strike, as an overlay for [Fightcade](https://www.fightcade.com/)'s FBNeo. After every attempt it shows what the move needed next to what you did, how many frames each part took against the window the game allows, and what went wrong when the move did not come out.
 
-![The overlay after a missed Hadoken: "went from 2 to 6 without 3", with a running bench session below](docs/images/overlay.png)
+![The overlay after a clean Shoryuken: a green card with the sparkle, one column per input, frames used over frames allowed, and recent attempts as pearls underneath](docs/images/overlay.png)
 
-The windows are the game's own: read from the command tables in the arcade ROM, and checked against the running game frame by frame (142,748 frames across every character, without a mismatch).
+The windows are the game's own: read from the command tables in the arcade ROM, and checked against the running game frame by frame (over 165,000 frames across every character and both Japanese ROM revisions, without a mismatch).
 
 ## Features
 
-- **Per-attempt grading** of every special move and super art, for all 20 characters: the move you went for, whether it came out, and the frames used per step against each step's window.
-- **Specific feedback** when it fails: a skipped diagonal ("went from 2 to 6 without 3"), a direction that came too late and by how many frames, a button too early or too late, a motion cancelled by up, or a different move coming out instead.
-- **Timing summary**: frames from the first direction to the button, the fastest possible, and your tightest margin, so you can see how close a successful input was to failing.
-- **Bench mode**: start a session, do reps, stop, and get success rates per move and per side, your most common mistake, your median margin, and first-ten against last-ten success.
-- **Target move**: restrict grading and the bench to one move.
+- **A card per attempt** for every special move and super art, for all 20 characters. One column per input of the motion plus the button: what the move needs on top, what you did in that input's time below it, and a meter with frames used over frames allowed.
+- **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up. The input that broke the attempt is boxed in red.
+- **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
+- **Recent attempts** as pearls under the card (red missed, green out, gold for clean and frame-perfect). Page Up and Page Down step back through them.
+- **Target any move**, including dashes, parries and other moves without a button, which are only graded while targeted. With a target, moving around between reps never counts as an attempt.
+- **Bench mode**: start a session, do reps, stop, and get success rates per move and per side, your most common mistake and your median margin.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
-- **Runs alongside [3rd_training_lua](https://github.com/Grouflon/3rd_training_lua)** (hitboxes, frame data, dummy control) in the same Fightcade session.
+- **Runs inside Fightcade's training mode** as an add-on, next to its hitboxes and input display, with Fightcade's own icons.
 - **Reference tables**: [every character's motions and windows](docs/windows.md), generated from the ROM.
 
 ## Requirements
 
 - Fightcade 2 with 3rd Strike (the `sfiii3nr1` set, which Fightcade uses).
-- This repository on the same machine. Fightcade's Linux Flatpak cannot see your home folder by default; see [Fightcade on Linux](#fightcade-on-linux).
+- This repository on the same machine.
 
-## Quick start
+## Install
 
-1. Start 3rd Strike in Fightcade's training mode (or offline) and get into a match.
-2. Open **Game > Lua Scripting > New Lua Script Window**, **Browse** to `input_grader.lua` in this repository, and **Run**.
-3. Do a Hadoken (236+P). The card appears at the bottom of the screen.
+### Linux (Fightcade Flatpak)
+
+Start Fightcade once, then run:
+
+```sh
+tools/install-fightcade-addon.sh
+```
+
+It adds the grader to Fightcade's training mode and lets the Flatpak read this repository and write its `logs/` folder. Start 3rd Strike with Fightcade's training mode, as usual: the grader loads with it.
+
+### Windows
+
+Run Git Bash in this repository and pass your training mode folder:
+
+```sh
+tools/install-fightcade-addon.sh "/c/path/to/Fightcade/emulator/fbneo/fbneo-training-mode"
+```
+
+Without Git Bash, create the folder `fbneo-training-mode\games\sfiii3\addon\` next to Fightcade's emulator, and put two files in it: `addons.lua` containing `addons_run = { "input_grader.lua" }`, and a copy of `tools\fightcade_addon.lua.in` named `input_grader.lua`, with `@GRADER@` replaced by the path of this repository ending in a backslash.
+
+### Without the training mode
+
+In a 3rd Strike match, open **Game > Lua Scripting > New Lua Script Window**, **Browse** to `input_grader.lua` in this repository, and **Run**. Loading a script this way stops any other script, including the training mode.
 
 ## Controls
 
-| Hotkey | Action |
+Plain keys, no setup in the emulator:
+
+| Key | Action |
 | --- | --- |
-| Alt+7 | Start a bench session, or stop it and show the results |
-| Alt+8 | Cycle the target move: all moves, then each of your character's moves |
-| Alt+9 | Hide or show the overlay |
+| M | Open or close the target picker. While it is open your character stands still: the stick moves through the list, LP picks, LK closes |
+| B | Start a bench session, or stop it and show the result |
+| H | Hide or show the overlay |
+| Page Up, Page Down | Step back and forward through recent attempts; a new attempt returns to the latest |
+
+If you map FBNeo's Lua Hotkeys 7, 8 and 9 (Input > Map game inputs), they do the same as B, M and H.
 
 ## Reading the card
 
-```
-Hadoken 236+P   MISSED: skipped a direction
-2  3  6  LP
-went from 2 to 6 without 3
-3f total (fastest possible 2f)
-```
-
-| Line | Meaning |
+| Part | Meaning |
 | --- | --- |
-| Title | The move, its notation, and `OUT` or `MISSED` with the kind of mistake |
-| Steps | Each direction and the button. `3 2/10` means 3 came 2 frames after the previous direction, of 10 allowed. `LP 0/10` means the button came on the frame the motion completed, of 10 allowed after it |
-| Reason | What went wrong, in plain words (missed attempts only) |
-| Timing | Frames from the first direction to the button, the fastest possible, and the tightest margin of any window |
+| Name line | The move, then CLEAN or FRAME-PERFECT, or what went wrong. TARGET in front marks your target move |
+| Top row | What the move needs: each direction, then the button. A dashed box is an optional direction (the last 6 of a super). A small ball on a slot means "then let go" (the Shoryuken's first 6) |
+| Middle row | What you did in that input's time. The first column also shows how long you held the first direction |
+| Meters | Frames since the previous input over frames allowed: `2/10`. The bar is green up to half the window, orange past half, red past the end, with a notch where the window ended |
+| Box colour | Green: the move came out. Red: it did not. Gold: frame-perfect |
+| Pearls | Recent attempts; the one shown is bigger and lifted |
 
 The verdicts are explained in [how it works](docs/how-it-works.md#verdicts).
 
 ## Bench mode
 
-Press Alt+7, do your reps, press Alt+7 again. The panel shows, per move: successes out of attempts, the success rate overall and per facing, the most common mistake, the median margin, and the success rate of your first ten attempts against your last ten. Choose a target with Alt+8 first to bench a single move.
+Press B, do your reps, press B again. A panel shows, per move: successes out of attempts, the success rate overall and per facing, the most common mistake and the median margin. Pick a target with M first to bench a single move.
 
 Every graded attempt, bench or not, is appended to `logs/attempts.csv`: time, character, move, facing, result, mistake, per-step timings and margins.
 
 ## Running with 3rd_training_lua
 
-FBNeo keeps one callback per hook, so two scripts loaded one after the other replace each other's hooks. The grader ships a launcher that runs both in one script:
+To use the grader with [3rd_training_lua](https://github.com/Grouflon/3rd_training_lua) instead of Fightcade's training mode, write a launcher that runs both in one script:
 
 ```sh
 tools/install-training-launcher.sh /path/to/3rd_training_lua
 ```
 
-This writes `3rd_training_with_grader.lua` into the training folder. Load that file instead of `3rd_training.lua`. The training script's hotkeys (Alt+1 to Alt+3) and the grader's (Alt+7 to Alt+9) do not overlap. If Fightcade runs under Wine and the training folder is on another Wine drive, add `--windows-path`.
-
-## Fightcade on Linux
-
-The Fightcade Flatpak has no access to your files. Let it read this repository, write the log, and read the training folder:
-
-```sh
-flatpak override --user \
-  --filesystem="$PWD":ro --filesystem="$PWD/logs" \
-  --filesystem=/path/to/3rd_training_lua \
-  com.fightcade.Fightcade
-```
-
-`tools/install-training-launcher.sh` prints this command with your paths filled in.
+This writes `3rd_training_with_grader.lua` into the training folder. Load that file instead of `3rd_training.lua`. If Fightcade runs under Wine and the training folder is on another Wine drive, add `--windows-path`.
 
 ## What the game does that you might not expect
 
@@ -103,8 +111,8 @@ Details in [how it works](docs/how-it-works.md); every move's windows in [window
 - Validated in the real game on both the Japan 990608 set and Fightcade's 990512 set.
 - Charge, 360 and mash moves are graded, with less specific feedback than motions.
 - The end-to-end verdict checks use Ryu; other characters' command checks are validated frame by frame, but their verdicts have only been spot-checked.
-- The screenshots come from the MAME test bench; FBNeo draws the same overlay with its own small font.
-- Tested with Fightcade 2.4.2 (Flatpak) on Linux; not yet run inside Fightcade by the author of these tools.
+- The screenshot comes from the MAME test bench, which has no icon sheet and draws its arrows with lines; in Fightcade the overlay uses Fightcade's own icons.
+- The overlay's drawing, icons, keys and menu were checked inside Fightcade 2.4.2 (Flatpak, Linux) with a smoke test (`smoke_test.lua`, [steps](docs/smoke-test.md)); a full session as a training-mode add-on is next.
 
 ## Development
 
@@ -128,11 +136,11 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 | Path | Contents |
 | --- | --- |
 | `input_grader.lua` | The script to load in FBNeo |
-| `lua/input_grader/core/` | Game-agnostic: app, bench, overlay, CSV log, hook multiplexer |
+| `lua/input_grader/core/` | Game-agnostic: app, card, pearls, target picker, bench, drawing, CSV log, hook multiplexer |
 | `lua/input_grader/platform/` | FBNeo and MAME adapters |
 | `lua/input_grader/games/sfiii3/` | 3rd Strike: generated tables, RAM map, checker port, tracker, grader |
 | `harness/mame/` | Real-game validation and end-to-end checks |
-| `tools/` | ROM decryption, table generation, ROM check, struct offsets, launcher installer |
+| `tools/` | ROM decryption, table generation, ROM check, struct offsets, add-on and launcher installers |
 | `tests/` | Unit tests (`lua tests/run.lua`) |
 | `docs/` | How it works, porting, windows reference |
 

@@ -4,7 +4,7 @@ The grader is split so the parts that know nothing about 3rd Strike can be reuse
 
 ```
 lua/input_grader/
-  core/              game-agnostic: app, bench, overlay, CSV, input history, hook multiplexer, run
+  core/              game-agnostic: app, card, pearls, picker, bench, drawing, font, CSV, input history, hooks, run
   platform/          one adapter per emulator: fbneo.lua (players), mame.lua (tests, screenshots)
   games/sfiii3/      everything 3rd Strike: tables, RAM map, checker port, tracker, grader
 ```
@@ -19,17 +19,24 @@ What `core/run.lua` and the game modules need from an emulator. See `platform/fb
 | --- | --- | --- |
 | `name`, `romname` | string | Identify the emulator and the loaded set |
 | `mem.u8`, `mem.u16`, `mem.s16`, `mem.u32` | `fn(address) -> number` | Read emulated memory, big- or little-endian as the CPU sees it |
-| `canvas:text(x, y, s, color)` | | Draw text in screen coordinates |
-| `canvas:box(x1, y1, x2, y2, fill, edge)` | | Draw a panel |
+| `canvas:pixel(x, y, color)` | | Draw one pixel |
+| `canvas:line(x1, y1, x2, y2, color)` | | Draw a line |
+| `canvas:box(x1, y1, x2, y2, fill, edge)` | | Draw a filled rectangle with an outline |
+| `canvas:text(x, y, s, color)` | | Draw text in FBNeo's 4x7 font, outlined in black |
+| `canvas:icon(key, x, y, size)` | `-> bool` | Draw an input icon (`u`, `dr`, `LP`, ...); `false` makes the card fall back to line arrows |
+| `on_before(fn)` | | Optional: call `fn` before every frame, while the inputs can still be changed |
+| `keys()` | `-> {name = true}` | Keyboard keys held, as FBNeo's `input.get()` names them (`M`, `pageup`) |
+| `pad()` | `-> {up, down, left, right, LP, ..., HK}` | The player's real controls, read before anything blocks them |
+| `block()` | | Keep the player's controls from the game this frame (while the picker is open) |
 | `on_frame(fn)` | | Call `fn` after every emulated frame |
 | `on_draw(fn)` | | Call `fn` when the overlay should draw |
-| `hotkey(n, fn)` | | Bind a hotkey (FBNeo: Alt+1 to Alt+9) |
+| `hotkey(n, fn)` | | Optional: bind FBNeo's Lua Hotkey `n` |
 | `clock()` | `-> seconds` | Emulated time |
 | `timestamp()` | `-> string` | Wall-clock time for the log |
 | `appender(path, header)` | `-> fn(line)` | Append lines to a file |
 | `print(s)` | | Report to the user |
 
-Colors are names (`text`, `dim`, `good`, `bad`, `warn`, `panel`, `edge`); each adapter maps them to its own format.
+Colours are RGBA numbers (`0xRRGGBBAA`) from the palette in `core/draw.lua`; each adapter converts them to its own format. Screen coordinates are the game's (384x224 for CPS3).
 
 ## The game module interface
 
@@ -38,7 +45,7 @@ What `core/app.lua` consumes.
 | Member | Purpose |
 | --- | --- |
 | `game:update() -> { attempt, ... }` | Called every frame; returns the attempts graded this frame (usually none) |
-| `game:moves() -> { {id, name, notation}, ... }` | Moves the current character can be graded on, for the bench target |
+| `game:moves() -> { {id, name, notation, buttonless, other}, ... }` | Moves the current character can be graded on, for the target picker; `other` puts a move after the divider |
 | `game:set_target(id or nil)` | Grade only one move |
 
 ### Attempt records
@@ -57,6 +64,17 @@ The overlay, the bench and the CSV log only read these fields:
 | `total`, `minimum` | `5`, `2` | Frames from the first step to the button, and the fastest possible |
 | `margin` | `7` | The smallest spare time of any window |
 | `side` | `"right"` | The facing during the attempt |
+| `trace` | see below | What the card draws |
+
+`trace` holds the frames around the attempt and where each step landed, in frames from its start:
+
+| Field | Example | Notes |
+| --- | --- | --- |
+| `frames` | `{ {dir=5, press=""}, {dir=2, press=""}, ... }` | One entry per frame: numpad direction and buttons newly pressed |
+| `steps` | `{ {label="6", at=3, release=true}, {label="2", at=6, window=10} }` | `at` when the step was satisfied, `window` when timed, `release` for "then let go" |
+| `optional` | `{ "6" }` | Directions of the notation the move accepts without, after the last step |
+| `button_at`, `button_window` | `9`, `10` | The frame of the button and the window it had |
+| `complete_at` | `8` | When the motion was complete, `nil` if never |
 
 ## Adding a game
 

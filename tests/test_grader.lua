@@ -192,6 +192,24 @@ return {
     end,
   },
   {
+    "the targets offered are the moves a player does alone: no parries or mashing, which depend on the opponent",
+    function()
+      local source = sources.sim(T.commands(), RYU, 0)
+      local game = Game.new(source, T.commands())
+      source:push(0, true)
+      game:update()
+      local names = {}
+      for _, m in ipairs(game:moves()) do
+        names[m.name] = true
+      end
+      T.truthy(names["forward dash"] and names["back dash"] and names["high jump"], "dashes and the high jump")
+      T.truthy(names["Hadoken"], "specials")
+      T.eq(names["parry (forward)"], nil)
+      T.eq(names["punch mashing"], nil)
+      T.eq(names["down"], nil)
+    end,
+  },
+  {
     "the super's last 6 is optional: notation minus the steps the game checks",
     function()
       local opt = Game.optional_directions(T.fighter(2).slots[20])

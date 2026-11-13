@@ -88,15 +88,19 @@ function Game:set_target(id)
   self.options.target = id
 end
 
---- Moves the current character can be targeted on: specials and super arts, and the moves
---- without a button (dashes, high jump, parries), which are graded only while targeted.
+-- Parries, mashing and the "down" slots only mean something against the opponent's actions.
+local SOLO_SYSTEM_SLOTS = { [0] = "forward dash", [1] = "back dash", [2] = "high jump" }
+
+--- Moves the current character can be targeted on: specials and super arts, and the dashes and
+--- high jump, which are graded only while targeted.
 function Game:moves()
   local list = {}
   if not self.fighter then
     return list
   end
   for slot, record in pairs(self.fighter.slots) do
-    if self.flags and self.flags[slot] ~= -1 and record.steps[1][1] ~= CK.NONE then
+    local practicable = slot >= C.SA_GROUND or SOLO_SYSTEM_SLOTS[slot] ~= nil
+    if practicable and self.flags and self.flags[slot] ~= -1 and record.steps[1][1] ~= CK.NONE then
       table.insert(list, {
         id = self.fighter.name .. ":" .. slot,
         name = record.name,

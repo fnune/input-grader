@@ -12,7 +12,7 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 - **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up. The input that broke the attempt is boxed in red.
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
 - **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
-- **Target any move**, including dashes, parries and other moves without a button, which are only graded while targeted. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
+- **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
 - **Runs inside Fightcade's training mode** as an add-on, next to its hitboxes and input display, with Fightcade's own icons.
 - **Reference tables**: [every character's motions and windows](docs/windows.md), generated from the ROM.
@@ -70,7 +70,7 @@ If you map FBNeo's Lua Hotkeys 8 and 9 (Input > Map game inputs), they do the sa
 | Meters | Frames since the previous input over frames allowed: `2/10`. The bar is green up to half the window, orange past half, red past the end, with a notch where the window ended |
 | Box colour | Green: the move came out. Red: it did not. Grey: your input was right but the game refused the move (busy, or a fireball still on screen). Gold: frame-perfect |
 | Pearls | Recent attempts; the one shown is bigger and lifted |
-| Dimmed card | It no longer answers what you did: a button since then got no card |
+| Dimmed card | It no longer answers what you did: a button since then got no card, or it is for another move than your target |
 | Line above the card | With a target: successes over attempts and the rate since you picked it. A refused input counts as a success |
 
 The verdicts are explained in [how it works](docs/how-it-works.md#verdicts).
@@ -146,7 +146,7 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 
 - P2 support, so you can grade from either side of a netplay or training session.
 - A training journal: progress per move over days and weeks, built from the attempt log.
-- Browsing old attempts: keep the last 20 cards, a row of dots under the card for recent results, and two keys to step back and forward. FBNeo's Alt hotkeys are mostly taken, so read keys with `input.get()`; pick ones that work on ISO layouts (not `[` and `]`, which need AltGr on many of them), such as Page Up and Page Down, and make them configurable.
+- Parry practice. A parry's timing is relative to the opponent's hit, so grading one needs the incoming attack's active frames from RAM (or a recorded dummy), not just the forward tap. Until then parries, mashing and the other system slots are left out of the target list.
 - Grading timing after an action, starting with dash into throw: whether the throw came before you could act, whether LP and LK were pressed together, and range or throw invulnerability.
 - A move cheatsheet on a hotkey: the current character's specials and selected super art, drawn with the same icons as the grid, with each step's window and the optional last directions. The command tables already hold everything it needs.
 - A pinned FBNeo build under Wine in the flake, to try the script without Fightcade. FBNeo's Lua only exists in its Windows build, and its command line takes a game or a script but not both, so this would be a manual check rather than an automated one.

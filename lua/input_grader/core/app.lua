@@ -150,12 +150,17 @@ function App:browse(step)
   self.shown = at < #self.attempts and at or nil
 end
 
---- Whether the latest card no longer answers what the player did: a button since then got no card.
+--- Whether the latest card no longer answers what the player did: a button since then got no
+--- card, or the card is for another move than the target.
 function App:stale()
-  if self.shown or not self.unanswered_press_at then
+  local latest = self.attempts[#self.attempts]
+  if self.shown or not latest then
     return false
   end
-  return self.tick - self.unanswered_press_at >= App.STALE_AFTER
+  if self.target and latest.id ~= self.target.id then
+    return true
+  end
+  return self.unanswered_press_at ~= nil and self.tick - self.unanswered_press_at >= App.STALE_AFTER
 end
 
 --- The target's success count and rate since it was picked: "14/20  70%".

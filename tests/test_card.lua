@@ -278,8 +278,9 @@ return {
       local c = canvas()
       app:draw(c)
       T.truthy(c:has_text("2/3  67%"), "drawn above the card")
-      app:choose({ id = "ryu:29", name = "Hadoken" })
+      app:choose({ id = "ryu:28", name = "Shoryuken" })
       T.eq(app:tally_text(), "0/0")
+      T.eq(app:stale(), true, "the Hadoken card does not answer the new target")
     end,
   },
   {

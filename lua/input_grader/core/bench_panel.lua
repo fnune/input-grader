@@ -8,6 +8,7 @@ local ERRORS = {
   too_slow = "too slow",
   early_button = "button too early",
   late_button = "button too late",
+  wrong_button = "wrong button",
   cancelled = "cancelled",
   missing_step = "incomplete motion",
   other_move = "different move",

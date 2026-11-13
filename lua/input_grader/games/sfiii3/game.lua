@@ -305,8 +305,13 @@ local function ground_matches(slot, airborne)
   return air == (airborne == true)
 end
 
+local function within_button_window(record, run, p)
+  return run.complete ~= nil and run.complete <= p.frame and p.frame - run.complete <= record.reset - 2
+end
+
 local function choose(self, p)
   local best, best_score
+  local best_wrong
   local since = p.frame - self.options.lookback
   for slot, record in pairs(self.fighter.slots) do
     if candidate(self, slot, record, self.flags) and ground_matches(slot, p.airborne) then
@@ -314,18 +319,24 @@ local function choose(self, p)
       local targeted = self.options.target == id
       local wanted = not self.options.target or targeted
       local fits = button_fits(record, p.pressed) or (p.started and p.started.slot == slot)
-      local wrong_button = targeted and not fits
+      local wrong_button = not fits
       local run, done = nil, -1
       if wanted and (fits or wrong_button) then
         for _, candidate_run in ipairs(self.tracker:runs_since(slot, since)) do
           local n = evidence(self, record, candidate_run, p.frame + self.options.settle)
-          local motion_done = candidate_run.complete ~= nil or not wrong_button
-          if n >= done and motion_done and self:is_attempt(record, candidate_run, p, targeted) then
+          local plausible = not wrong_button
+            or (targeted and candidate_run.complete ~= nil)
+            or within_button_window(record, candidate_run, p)
+          if n >= done and plausible and self:is_attempt(record, candidate_run, p, targeted) then
             run, done = candidate_run, n
           end
         end
       end
-      if run then
+      if run and wrong_button then
+        if not best_wrong or #record.steps > #best_wrong.record.steps then
+          best_wrong = { slot = slot, record = record, run = run, id = id, wrong_button = true }
+        end
+      elseif run then
         local total = shown_steps(record)
         local score = math.min(done, total) / total
         local better = not best
@@ -333,12 +344,12 @@ local function choose(self, p)
           or (score == best_score and p.started and p.started.slot == slot)
           or (score == best_score and not (p.started and p.started.slot == best.slot) and total > #best.record.steps)
         if better then
-          best, best_score = { slot = slot, record = record, run = run, id = id, wrong_button = wrong_button }, score
+          best, best_score = { slot = slot, record = record, run = run, id = id }, score
         end
       end
     end
   end
-  return best
+  return best or best_wrong
 end
 
 local function plural(n, word)

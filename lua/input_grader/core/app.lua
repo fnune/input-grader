@@ -13,6 +13,10 @@ App.__index = App
 App.HISTORY = 20
 App.HELP = "M TARGET   B BENCH   H HIDE   PGUP/PGDN HISTORY"
 App.CARD_Y = 145
+App.STALE_AFTER = 30
+App.STALE_FADE = 0.4
+
+local BUTTONS = { "LP", "MP", "HP", "LK", "MK", "HK" }
 
 --- @param deps table { game, bench, clock = fn() -> seconds, timestamp = fn() -> string,
 ---   log = fn(line)|nil, avoid = rectangles to keep clear (the input display), y = card top }
@@ -29,11 +33,14 @@ function App.new(deps)
   self.picker_open, self.pick = false, 1
   self.target = nil
   self.prev_keys, self.prev_pad = {}, {}
+  self.tick, self.unanswered_press_at, self.card_predates_bench = 0, nil, false
   return self
 end
 
 function App:frame()
+  self.tick = self.tick + 1
   for _, attempt in ipairs(self.game:update()) do
+    self.unanswered_press_at, self.card_predates_bench = nil, false
     table.insert(self.attempts, attempt)
     if #self.attempts > App.HISTORY then
       table.remove(self.attempts, 1)
@@ -72,6 +79,13 @@ function App:controls(keys, pad)
       self:choose(rows[self.pick])
     elseif pressed(p, self.prev_pad, "LK") then
       self.picker_open = false
+    end
+  end
+  if not self.picker_open and not self.unanswered_press_at then
+    for _, b in ipairs(BUTTONS) do
+      if pressed(p, self.prev_pad, b) then
+        self.unanswered_press_at = self.tick
+      end
     end
   end
   if pressed(k, self.prev_keys, "B") then
@@ -113,6 +127,7 @@ function App:toggle_bench()
   else
     self.bench_result = nil
     self.bench:start(self.target and self.target.id or nil)
+    self.card_predates_bench = true
   end
 end
 
@@ -127,6 +142,16 @@ function App:browse(step)
   local at = (self.shown or #self.attempts) + step
   at = math.max(1, math.min(#self.attempts, at))
   self.shown = at < #self.attempts and at or nil
+end
+
+--- Whether the latest card no longer answers what the player did: a button since then got no
+--- card, or the bench started after it.
+function App:stale()
+  if self.shown then
+    return false
+  end
+  local unanswered = self.unanswered_press_at and self.tick - self.unanswered_press_at >= App.STALE_AFTER
+  return self.card_predates_bench or unanswered or false
 end
 
 function App:draw(canvas)
@@ -148,7 +173,8 @@ function App:draw(canvas)
     canvas:text(fit.x1 + 1, self.card_y + 30, App.HELP, COL.dim)
     return
   end
-  local box = card.draw(canvas, attempt, {
+  local card_canvas = self:stale() and draw.faded(canvas, App.STALE_FADE) or canvas
+  local box = card.draw(card_canvas, attempt, {
     x0 = fit.x1,
     y0 = self.card_y,
     max_x1 = fit.x2,

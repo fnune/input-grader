@@ -72,6 +72,7 @@ If you map FBNeo's Lua Hotkeys 7, 8 and 9 (Input > Map game inputs), they do the
 | Meters | Frames since the previous input over frames allowed: `2/10`. The bar is green up to half the window, orange past half, red past the end, with a notch where the window ended |
 | Box colour | Green: the move came out. Red: it did not. Gold: frame-perfect |
 | Pearls | Recent attempts; the one shown is bigger and lifted |
+| Dimmed card | It no longer answers what you did: a button since then got no card, or the bench started after it |
 
 The verdicts are explained in [how it works](docs/how-it-works.md#verdicts).
 

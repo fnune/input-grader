@@ -108,12 +108,12 @@ function M.new(env)
     text = function(_, x, y, s, c)
       gui.text(x, y, s, c, 0x000000FF)
     end,
-    icon = function(_, key, x, y, size)
+    icon = function(_, key, x, y, size, opacity)
       local str = icon and key and icon(key, size)
       if not str then
         return false
       end
-      gui.image(x, y, str)
+      gui.image(x, y, str, opacity or 1)
       return true
     end,
   }

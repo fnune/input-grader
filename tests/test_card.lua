@@ -279,6 +279,52 @@ return {
     end,
   },
   {
+    "app: a button that gets no card dims the last one, so it is not read as the answer",
+    function()
+      local queue = { attempt(CLEAN) }
+      local game = {
+        update = function()
+          local out = queue
+          queue = {}
+          return out
+        end,
+        moves = function()
+          return {}
+        end,
+        set_target = function() end,
+      }
+      local app = App.new({
+        game = game,
+        bench = Bench.new(function()
+          return 0
+        end),
+        clock = function()
+          return 0
+        end,
+      })
+      local function name_alpha()
+        local c = canvas()
+        app:draw(c)
+        return c:has_text("HADOKEN").c % 256
+      end
+      app:frame()
+      local bright = name_alpha()
+      app:controls({}, { MK = true })
+      app:frame()
+      T.eq(name_alpha(), bright, "not yet: the card for this press may still come")
+      for _ = 1, App.STALE_AFTER do
+        app:controls({}, {})
+        app:frame()
+      end
+      T.truthy(name_alpha() < bright, "dimmed")
+      queue = { attempt(CLEAN) }
+      app:frame()
+      T.eq(name_alpha(), bright, "a new card is bright")
+      app:controls({ B = true }, {})
+      T.truthy(name_alpha() < bright, "the card from before the bench is dimmed")
+    end,
+  },
+  {
     "app: with no attempt yet, a line of help is shown",
     function()
       local game = {

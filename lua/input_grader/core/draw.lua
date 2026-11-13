@@ -26,6 +26,30 @@ function M.alpha(c, a)
   return c - c % 256 + a
 end
 
+--- A canvas that draws through `canvas` with every colour's opacity scaled by `factor`.
+function M.faded(canvas, factor)
+  local function fade(c)
+    return c and M.alpha(c, math.floor(c % 256 * factor))
+  end
+  return {
+    pixel = function(_, x, y, c)
+      canvas:pixel(x, y, fade(c))
+    end,
+    line = function(_, x1, y1, x2, y2, c)
+      canvas:line(x1, y1, x2, y2, fade(c))
+    end,
+    box = function(_, x1, y1, x2, y2, fill, outline)
+      canvas:box(x1, y1, x2, y2, fade(fill), fade(outline))
+    end,
+    text = function(_, x, y, s, c)
+      canvas:text(x, y, s, fade(c))
+    end,
+    icon = function(_, key, x, y, size, opacity)
+      return canvas:icon(key, x, y, size, (opacity or 1) * factor)
+    end,
+  }
+end
+
 local DIR_KEYS = { [1] = "dl", [2] = "d", [3] = "dr", [4] = "l", [6] = "r", [7] = "ul", [8] = "u", [9] = "ur" }
 function M.dir_key(d)
   return DIR_KEYS[d]

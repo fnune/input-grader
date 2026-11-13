@@ -94,7 +94,7 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `missing_step` | The motion never reached a direction |
 | `early_button` | The button came before the motion completed, and was still held after the window |
 | `late_button` | The button came after the window that follows the motion |
-| `wrong_button` | Targeted moves only: the motion was complete, but the button was one the move does not take (a punch for the Tatsumaki) |
+| `wrong_button` | The motion was complete, but the button was one the move does not take (a punch for the Tatsumaki). Without a target, only when the button came inside the window and fits no other move |
 | `cancelled` | An input that cancels the motion (exactly up, for most specials) arrived mid-motion |
 | `other_move` | A different move started (for example the super instead of the Hadoken) |
 | `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |

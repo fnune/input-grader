@@ -161,9 +161,25 @@ return {
     end,
   },
   {
-    "without a target, the wrong button after a motion is not an attempt",
+    "without a target, a complete motion with the wrong button is a miss too",
     function()
-      T.eq(#play({ { 5, 20 }, { 2, 2 }, { 1, 2 }, { 4, 1, "LP" }, { 5, 40 } }), 0)
+      local a = one({ { 5, 20 }, { 6, 2 }, { 5, 1 }, { 2, 2 }, { 3, 2 }, { 6, 1, "MK" }, { 5, 40 } })
+      T.eq(a.move, "Shoryuken")
+      T.eq(a.error.code, "wrong_button")
+      T.eq(a.button.need, "LP")
+    end,
+  },
+  {
+    "without a target, an unfinished motion with the wrong button is not an attempt",
+    function()
+      T.eq(#play({ { 5, 20 }, { 6, 2 }, { 5, 1 }, { 2, 2 }, { 5, 3, "MK" }, { 5, 40 } }), 0)
+    end,
+  },
+  {
+    "a button that fits a move wins over the wrong button for a completed one",
+    function()
+      local a = one({ { 5, 20 }, { 4, 2 }, { 1, 2 }, { 2, 2 }, { 3, 2 }, { 6, 1, "LK" }, { 5, 40 } })
+      T.eq(a.move, "Joudan Sokutou Geri")
     end,
   },
   {

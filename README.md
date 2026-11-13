@@ -91,6 +91,7 @@ From the game's own code, each pinned by a test:
 - The button may come on the frame the motion completes or up to 10 frames later.
 - Most specials also come out on the release of a button (negative edge).
 - The Shoryuken's 6 can be held as long as you like; the 5-frame window starts when you let go of it.
+- Holding down before a Hadoken re-arms the motion every 11 frames, so the 10 frames for the next direction count from the last re-arm, not from letting go of down. A slow roll through down-back after a long crouch can fail by luck of timing.
 - Super motions do not check the last 6: 23623+P is enough.
 - Only an exact up cancels a motion. Up-forward does not.
 

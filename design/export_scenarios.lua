@@ -10,6 +10,7 @@ local T = require("helpers")
 
 local SCENARIOS = {
   { "Clean Hadoken", { { 5, 6 }, { 2, 2 }, { 3, 2 }, { 6, 1, "LP" } } },
+  { "cr.LK held into Hadoken", { { 5, 4 }, { 2, 1, "LK" }, { 2, 18 }, { 3, 2 }, { 6, 1, "LP" } } },
   { "Skipped diagonal", { { 5, 6 }, { 2, 3 }, { 6, 1, "LP" } } },
   { "Slow diagonal", { { 5, 6 }, { 2, 1 }, { 1, 12 }, { 3, 1 }, { 6, 1, "LP" } } },
   { "Late button", { { 5, 6 }, { 2, 1 }, { 3, 1 }, { 6, 14 }, { 6, 1, "LP" } } },

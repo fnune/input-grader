@@ -92,7 +92,7 @@ Candidates are the character's specials and the selected super art that fit the 
 
 Each of these is pinned by a test in `tests/test_checker.lua` or `harness/mame/grade.lua`.
 
-- **Holding the first direction is free.** While waiting for step 1 the check restarts every frame, so 2 held for a second still counts as a fresh 2.
+- **Holding the first direction re-arms it, every 11 frames.** Once 2 is accepted, 3 must follow within 10 frames; if that runs out while 2 is still held, the game accepts 2 again and starts a fresh 10. So the window counts from the last re-acceptance, not from letting go: hold 2, then pass through 1 for 6 frames before 3, and the Hadoken comes out after a 1 to 4 frame hold, fails after 5 to 11, works again after 12 to 15, and so on.
 - **Windows count from the previous step.** "3 within 10 frames" means within 10 frames of the frame 2 matched.
 - **The button window is 10 frames for almost every move.** The motion may complete on the same frame as the button, or the button may follow up to 10 frames later.
 - **Most specials and supers accept the release of a button.** A button pressed early and let go on the last direction still works (negative edge), unless the press started a normal and the character is busy.

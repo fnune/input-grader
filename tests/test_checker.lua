@@ -129,4 +129,16 @@ return {
       T.eq(starts({ { 5, 2 }, { 2, 1 }, { 3, 1 }, { 8, 1 }, { 6, 1, "LP" } }), nil)
     end,
   },
+  {
+    "Holding 2 re-arms the window every 11 frames, so a detour after a long hold can fail",
+    function()
+      local function hadoken_after_hold(n)
+        return starts({ { 5, 3 }, { 2, n }, { 1, 6 }, { 3, 1 }, { 6, 1, "LP" } }) == HADOKEN
+      end
+      T.eq(hadoken_after_hold(4), true)
+      T.eq(hadoken_after_hold(5), false)
+      T.eq(hadoken_after_hold(12), true)
+      T.eq(hadoken_after_hold(16), false)
+    end,
+  },
 }

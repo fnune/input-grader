@@ -421,7 +421,18 @@ end
 --- relative to the first frame of `frames` (1-based), so the record stays game-agnostic.
 function Game:trace(p, pick)
   local record, run = pick.record, pick.run
-  local first = math.max((run.steps[1] or run.start) - 4, 1)
+  -- Reach back over the whole hold of step 1's direction: a held 2 is re-accepted every 11
+  -- frames, so the accepted frame is often late in the hold.
+  local first = run.steps[1] or run.start
+  local held = self.history:at(first)
+  while held and first > 1 and first > p.frame - 90 do
+    local before = self.history:at(first - 1)
+    if not before or before.lever ~= held.lever then
+      break
+    end
+    first = first - 1
+  end
+  first = math.max(first - 2, 1)
   local last = math.max(p.frame, run.complete or 0) + 4
   local trace = { frames = {}, steps = {} }
   for _, h in ipairs(self.history:range(first, last)) do

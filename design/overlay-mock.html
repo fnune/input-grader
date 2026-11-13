@@ -21,7 +21,7 @@
   <span>Scale</span><span id="scales"></span>
   <span>Position</span><span id="positions"></span>
   <span>Fightcade input display</span><span id="history"></span>
-  <span>Show</span><span id="toggles"></span>
+<span id="toggles"></span>
 </div>
 <canvas id="screen" width="384" height="224"></canvas>
 <p class="note">Drawn only with FBNeo's <code>gui.box</code>, <code>gui.line</code>, <code>gui.pixel</code>, <code>gui.image</code> (Fightcade training mode's own icon sheet, read from your Fightcade install) and <code>gui.text</code> (its real 4×7 font) on the native 384×224 screen; scaled with nearest-neighbour like Fightcade. Every scenario is real grader output (<code>design/export_scenarios.lua</code>).</p>
@@ -206,109 +206,131 @@ function notationParts(notation) {
   return parts;
 }
 
-function drawLane(a, opt) {
+// Splits the played frames into one group per column: each frame belongs to the first step at or
+// after it that the player reached (accepted, or seen late), and the counted button press to the
+// button column. Steps never reached get no frames, which is what makes a skip visible.
+function columns(a) {
   const t = a.trace, n = t.frames.length;
-  const y0 = opt.position === "top" ? 44 : opt.position === "middle" ? 96 : 138;
+  const reach = t.steps.map(s => s.at);
+  // Steps not accepted but played anyway (a late diagonal, the 6 after a skip): their first
+  // arrival after the previous reached step.
+  let last = reach[0] || 0;
+  t.steps.forEach((s, k) => {
+    if (reach[k] === undefined && k > 0) {
+      const d = Number(s.label);
+      const f = t.frames.findIndex((fr, i) => i + 1 > last && i + 1 <= t.button_at && fr.dir === d) + 1;
+      if (f > 0) reach[k] = f;
+    }
+    if (reach[k] !== undefined) last = reach[k];
+  });
+  const cols = t.steps.map(() => []);
+  const buttonCol = [];
+  const first = reach[0] !== undefined ? reach[0] : 1;
+  // Step 1 shows only the hold that it matched.
+  let start1 = first;
+  while (start1 > 1 && t.frames[start1 - 2].dir === t.frames[first - 1].dir) start1--;
+  for (let f = start1; f <= Math.min(n, t.button_at); f++) {
+    const k = reach.findIndex(at => at !== undefined && at >= f);
+    const frame = t.frames[f - 1];
+    if (f === t.button_at) {
+      buttonCol.push({ dir: 0, press: frame.press });
+      if (k >= 0 && reach[k] === f) cols[k].push({ dir: frame.dir, press: "" });
+    } else if (k >= 0) cols[k].push(frame);
+    else buttonCol.push({ dir: frame.dir, press: frame.press });
+  }
+  return { reach, cols, buttonCol };
+}
+
+// Consecutive equal frames as runs { dir, press, n }.
+function runsOf(frames) {
+  const runs = [];
+  for (const f of frames) {
+    const last = runs[runs.length - 1];
+    if (last && last.dir === f.dir && !f.press && !last.press) last.n++;
+    else runs.push({ dir: f.dir, press: f.press, n: 1 });
+  }
+  return runs;
+}
+
+const RUN_W = r => (r.dir ? 10 : 0) + (r.press.match(/[LMH][PK]/g) || []).length * 10;
+
+function drawRuns(cx, y, runs, color) {
+  const widths = runs.map(r => Math.max(RUN_W(r), 9));
+  const total = widths.reduce((s, w) => s + w, 0) + 3 * Math.max(runs.length - 1, 0);
+  let x = cx - Math.floor(total / 2);
+  runs.forEach((r, i) => {
+    let ix = x;
+    if (r.dir === 5) gui.box(ix + 3, y + 3, ix + 5, y + 5, COL.dim, COL.dim);
+    else if (r.dir) { gui.image(ix, y, dirKey(r.dir), 9, 9); }
+    if (r.dir) ix += 10;
+    for (const b of (r.press.match(/[LMH][PK]/g) || [])) { gui.image(ix, y, b, 9, 9); ix += 10; }
+    if (r.dir && r.n > 1) gui.text(x + Math.floor(widths[i] / 2) - 2 * String(r.n).length, y + 10, String(r.n), color);
+    x += widths[i] + 3;
+  });
+  return total;
+}
+
+function drawLane(a, opt) {
+  const t = a.trace;
+  const y0 = opt.position === "top" ? 44 : opt.position === "middle" ? 96 : 142;
+  const height = 60;
   const avoid = opt.history === "on" ? [fightcadeInputs(a)] : [];
-  const fit = panelFit(y0, y0 + 66, avoid), compact = fit.compact;
+  const fit = panelFit(y0, y0 + height, avoid), compact = fit.compact;
   const x0 = fit.x1, x1 = fit.x2;
-  const showInputs = opt.inputs && !compact;
-  const height = 38 + (showInputs ? 20 : 0) + (opt.ruler ? 8 : 0);
   gui.box(x0, y0, x1, y0 + height, COL.panel, COL.edge);
 
-  // Left: verdict badge, the move, and the reason.
-  const ok = a.ok, accent = ok ? COL.good : COL.bad;
-  badge(x0 + 4, y0 + 4, ok);
+  // Left: verdict, move name, reason. The motion itself is only in the grid.
+  const ok = a.ok;
   const r = reason(a);
-  if (compact) {
-    // Compact: the move name goes, the reason sits under the lane.
-    inline(x0 + 4, y0 + 23, notationParts(a.notation), COL.dim);
-  } else {
-    gui.text(x0 + 24, y0 + 5, a.move.toUpperCase(), COL.text);
-    inline(x0 + 24, y0 + 14, notationParts(a.notation), COL.dim);
-    inline(x0 + 4, y0 + 26, r.parts, ok ? COL.dim : COL.warn);
-  }
+  badge(x0 + 4, y0 + 4, ok);
+  if (!compact) gui.text(x0 + 24, y0 + 5, a.move.toUpperCase(), COL.text);
+  inline(compact ? x0 + 4 : x0 + 24, compact ? y0 + 24 : y0 + 15, r.parts, ok ? COL.dim : COL.warn);
 
-  // Right: the lane, one column per frame.
-  const lx = x0 + (compact ? 26 : 104), lw = x1 - 4 - lx;
-  const fw = Math.max(3, Math.min(14, Math.floor(lw / n)));
-  const X = f => lx + (f - 1) * fw + Math.floor(fw / 2);
-  let y = y0 + 4;
-
-  // Row: the motion as evenly spaced slots, each direction and the button with its timing meter.
-  const ay = y + 6;
-  const slots = t.steps.map((s, k) => ({ step: s, k }));
-  slots.push({ button: true });
-  const slotW = Math.max(34, 2 * Math.max(...t.steps.map(s => s.window || 0), t.button_window) + 8);
-  slots.forEach((slot, i) => {
-    const cx = lx + Math.floor(slotW / 2) + i * slotW;
-    if (slot.button) {
+  // Right: one column per step plus the button. Row 1 what was needed, row 2 what you did in
+  // that column's time, row 3 the timing meter.
+  const { reach, cols, buttonCol } = columns(a);
+  const gx = x0 + (compact ? 4 : 104);
+  const colW = k => {
+    const runs = k < t.steps.length ? runsOf(cols[k]) : runsOf(buttonCol);
+    const win = k < t.steps.length ? (t.steps[k].window || 0) : t.button_window;
+    const runsW = runs.reduce((s, r) => s + Math.max(RUN_W(r), 9) + 3, 0);
+    return Math.max(30, win * 2 + 8, runsW + 6);
+  };
+  const ny = y0 + 12, ry = y0 + 24, my = y0 + 45;
+  let cx = gx;
+  for (let k = 0; k <= t.steps.length; k++) {
+    const w = colW(k), mid = cx + Math.floor(w / 2);
+    if (cx + w > x1 - 2) break;
+    if (k > 0) gui.line(cx, y0 + 4, cx, y0 + height - 4, 0xFFFFFF18);
+    if (k === t.steps.length) {
+      // The button column.
       const c = ok ? COL.good : (r.button ? COL.bad : COL.button);
-      gui.box(cx - 7, ay - 7, cx + 7, ay + 7, (c & 0xFFFFFF00) | 0x40, c);
+      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | 0x40, c);
       const btn = (a.button.label.match(/[LMH][PK]/) || [])[0];
-      if (opt.icons && btn) gui.image(cx - 5, ay - 5, btn, 11, 11); else gui.text(cx - 3, ay - 3, a.button.label[1] || "?", COL.text, 0);
+      if (btn) gui.image(mid - 5, ny - 5, btn, 11, 11);
+      drawRuns(mid, ry, runsOf(buttonCol).filter(r => r.press || r.dir), COL.dim);
       if (t.complete_at !== undefined && t.complete_at !== null) {
         const after = t.button_at - t.complete_at;
-        if (after >= 0) meter(cx, ay + 9, after, t.button_window);
-        else gui.text(cx - 2 * `${-after}F EARLY`.length, ay + 9, `${-after}F EARLY`, COL.bad);
+        if (after >= 0) meter(mid, my, after, t.button_window);
+        else gui.text(mid - 2 * `${-after}F EARLY`.length, my, `${-after}F EARLY`, COL.bad);
       }
-      return;
+    } else {
+      const s = t.steps[k], d = Number(s.label), prev = reach[k - 1];
+      const accepted = s.at !== undefined, missed = !ok && r.step === k;
+      const c = accepted ? (missed ? COL.bad : COL.good) : (missed ? COL.bad : COL.dim);
+      gui.box(mid - 7, ny - 7, mid + 7, ny + 7, (c & 0xFFFFFF00) | (accepted ? 0x40 : 0), c);
+      if (!isNaN(d)) gui.image(mid - 6, ny - 6, dirKey(d), 13, 13);
+      if (!accepted && missed && reach[k] === undefined) {
+        gui.line(mid - 7, ny + 7, mid + 7, ny - 7, COL.bad);
+        gui.line(mid - 6, ny + 7, mid + 7, ny - 6, COL.bad);
+      }
+      const runs = runsOf(cols[k]);
+      if (runs.length) drawRuns(mid, ry, runs, COL.dim);
+      else gui.text(mid - 6, ry + 1, "---", COL.bad);
+      if (k === 0) gui.text(mid - 10, my, "START", COL.dim);
+      else if (s.window && prev !== undefined && reach[k] !== undefined) meter(mid, my, reach[k] - prev, s.window);
     }
-    const s = slot.step, k = slot.k, d = Number(s.label), prev = t.steps[k - 1];
-    const from = prev && prev.at !== undefined ? prev.at + 1 : 1;
-    const seenAt = s.at !== undefined ? s.at : t.frames.findIndex((f, j) => j + 1 >= from && f.dir === d) + 1;
-    const missed = !ok && r.step === k;
-    let c = COL.good, fill = 0x40;
-    if (s.at === undefined) { c = missed ? COL.bad : COL.dim; fill = 0x00; }
-    else if (missed) c = COL.bad;
-    gui.box(cx - 7, ay - 7, cx + 7, ay + 7, (c & 0xFFFFFF00) | fill, c);
-    if (!isNaN(d)) { if (opt.icons) gui.image(cx - 6, ay - 6, dirKey(d), 13, 13); else arrow(cx, ay, d, 3, c); }
-    else gui.text(cx - 2 * s.label.length, ay - 3, s.label, COL.text);
-    if (s.at === undefined && !(missed && seenAt > 0 && a.error.code === "too_slow")) {
-      if (missed) { gui.line(cx - 7, ay + 7, cx + 7, ay - 7, COL.bad); gui.line(cx - 6, ay + 7, cx + 7, ay - 6, COL.bad); }
-    }
-    if (s.window && prev && prev.at !== undefined && seenAt > 0 && (s.at !== undefined || missed)) {
-      meter(cx, ay + 9, seenAt - prev.at, s.window);
-    } else if (k === 0) {
-      gui.text(cx - 2 * 5, ay + 9, "START", COL.dim);
-    }
-  });
-  y = ay + 22;
-  if (compact) inline(x0 + 4, y0 + 34, r.parts, ok ? COL.dim : COL.warn);
-
-  // Row: what the stick actually did, as runs like Fightcade's input display: the direction
-  // (and any button pressed) with the frames it was held underneath. Runs holding an accepted
-  // step are outlined green.
-  if (showInputs) {
-    const hit = new Set(t.steps.filter(s => s.at !== undefined).map(s => s.at));
-    const runs = [];
-    t.frames.forEach((f, i) => {
-      const last = runs[runs.length - 1];
-      if (last && last.dir === f.dir && !f.press) { last.n++; if (hit.has(i + 1)) last.hit = true; }
-      else runs.push({ dir: f.dir, press: f.press, n: 1, hit: hit.has(i + 1) });
-    });
-    let rx = lx;
-    for (const run of runs) {
-      const btns = run.press.match(/[LMH][PK]/g) || [];
-      const w = 10 + btns.length * 10;
-      if (rx + w > x1 - 4) break;
-      if (run.hit) gui.box(rx - 1, y - 1, rx + w - 1, y + 9, 0x00000000, COL.good);
-      if (run.dir !== 5) gui.image(rx, y, dirKey(run.dir), 9, 9);
-      else gui.box(rx + 3, y + 3, rx + 5, y + 5, COL.dim, COL.dim);
-      btns.forEach((b, j) => gui.image(rx + 10 + j * 10, y, b, 9, 9));
-      gui.text(rx + Math.floor(w / 2) - 2 * String(run.n).length - 1, y + 11, String(run.n), COL.dim);
-      rx += w + 3;
-    }
-    y += 20;
-  }
-
-  // Row: a frame ruler, a tick every frame and a number every 5.
-  if (opt.ruler) {
-    for (let f = 1; f <= n; f++) {
-      gui.pixel(X(f), y, COL.dim);
-      if ((f - 1) % 5 === 0) { gui.line(X(f), y, X(f), y + 2, COL.dim); }
-    }
-    gui.text(x1 - 4 - 4 * 7, y + 1, `${fw}PX/F`, COL.dim, 0);
+    cx += w;
   }
 }
 
@@ -336,7 +358,7 @@ buttons("scales", "scale", [1, 2, 3, 4], v => v + "x");
 buttons("positions", "position", ["bottom", "middle", "top"]);
 buttons("history", "history", ["off", "on"]);
 const tg = document.getElementById("toggles");
-for (const k of ["icons", "inputs", "ruler"]) {
+for (const k of []) {
   const b = document.createElement("button"); b.textContent = k; b.dataset.k = k; b.dataset.v = "true";
   b.onclick = () => { state[k] = !state[k]; render(); }; tg.appendChild(b);
 }

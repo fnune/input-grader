@@ -199,20 +199,20 @@ const NEUTRAL = {
     "..#####..",
     ".#WWWWW#.",
     "#WWWWWWW#",
+    "#WWWWWWW#",
+    "#WWWWWWW#",
     "#WWWWWWS#",
     "#WWWWWWS#",
-    "#WWWWWSS#",
-    "#WWWWSSS#",
-    ".#SSSSS#.",
+    ".#WWSSS#.",
     "..#####..",
   ],
   7: [
     "..###..",
     ".#WWW#.",
     "#WWWWW#",
+    "#WWWWW#",
     "#WWWWS#",
-    "#WWWSS#",
-    ".#SSS#.",
+    ".#WSS#.",
     "..###..",
   ],
 };
@@ -226,28 +226,26 @@ function neutralIcon(x, y, size) {
 // A 9x9 pixel star, outlined in black so it reads over the box edge.
 // "#" gold. Placed so the box border runs into the right leg, never between the legs.
 const STAR = [
-  "....#....",
-  "....#....",
-  "...###...",
-  "#########",
-  ".#######.",
-  "..#####..",
-  "..##.##..",
-  ".##...##.",
-  ".#.....#.",
+  "....H....",
+  "...HYY...",
+  "HHHHYYYYS",
+  ".HYYYYYS.",
+  "..YYYYS..",
+  "..YYYYS..",
+  ".YYS.YSS.",
+  ".YS...SS.",
 ];
-function star(x, y, c) {
-  const body = (i, j) => STAR[j] && (STAR[j][i] === "#" || STAR[j][i] === "k");
-  for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) {
-    if (!body(i, j)) continue;
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      if (!body(i + dx, j + dy)) gui.pixel(x + i + dx, y + j + dy, 0x000000FF);
-    }
+// "H" highlight, "Y" gold, "S" shadow; the outline is drawn round it in black.
+function star(x, y) {
+  const colour = { H: 0xFFF2A8FF, Y: COL.gold, S: 0xD9921EFF };
+  const body = (i, j) => STAR[j] !== undefined && colour[STAR[j][i]] !== undefined;
+  for (let j = -1; j <= STAR.length; j++) for (let i = -1; i <= 9; i++) {
+    if (body(i, j)) continue;
+    if (body(i - 1, j) || body(i + 1, j) || body(i, j - 1) || body(i, j + 1)) gui.pixel(x + i, y + j, 0x000000FF);
   }
-  for (let j = 0; j < 9; j++) for (let i = 0; i < 9; i++) {
-    if (STAR[j][i] === "#") gui.pixel(x + i, y + j, c);
-    else if (STAR[j][i] === "k") gui.pixel(x + i, y + j, 0x000000FF);
-  }
+  STAR.forEach((row, j) => {
+    for (let i = 0; i < row.length; i++) if (colour[row[i]]) gui.pixel(x + i, y + j, colour[row[i]]);
+  });
 }
 
 // A bevelled box outline drawn every other pixel: something optional. Each edge and corner
@@ -540,7 +538,7 @@ function drawLane(a, opt) {
     }
     cx += w + GAP;
   }
-  if (safe) star(x1 - 7, y0 - 4, COL.gold);
+  if (safe) star(x1 - 7, y0 - 3);
   return { x0, x1, y0, y1: y0 + height };
 }
 

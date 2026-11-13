@@ -87,6 +87,71 @@ local PARRY_CASES = {
   { "low parry", 0x202, 18, 2, true },
 }
 
+local LP_LK = 0x110
+-- Forward dash from a step back, then a press `at` frames after the dash's last input (a throw is
+-- first possible 12 frames after it, measured in throw.lua).
+local FOLLOWUP_CASES = {
+  { "dash, throw on the first frame", "mid", 12, LP_LK, true, nil, 0 },
+  { "dash, throw 1 frame early", "mid", 11, LP_LK, false, "followup_early", -1 },
+  { "dash, throw 3 frames late", "mid", 15, LP_LK, true, nil, 3 },
+  { "dash, LP then LK 2 frames later", "mid", 12, 0x10, false, "throw_split", 0 },
+  { "dash, throw out of range", "far", 12, LP_LK, false, "throw_whiff", 0 },
+}
+
+local function followup_cases(report)
+  local failures = 0
+  app:choose({ id = "ryu:after:forward_dash:throw", name = "dash > throw" })
+  S.load("parry")
+  S.hold_raw(4)
+  S.wait(16)
+  S.hold({})
+  S.wait(20)
+  S.save("mid")
+  S.load("parry")
+  S.hold_raw(4)
+  S.wait(60)
+  S.hold({})
+  S.wait(20)
+  S.save("far")
+  for _, case in ipairs(FOLLOWUP_CASES) do
+    S.load(case[2])
+    local before = #graded
+    local words = inputs.timeline({ { 6, 1 }, { 5, 2 }, { 6, 1 } }, true)
+    local dash_len = #words
+    for f = 1, 50 do
+      words[dash_len + f] = (f == case[3]) and case[4] or ((case[4] == 0x10 and f == case[3] + 2) and 0x100 or 0)
+    end
+    for _, raw in ipairs(words) do
+      S.hold_raw(raw)
+      coroutine.yield()
+    end
+    S.hold({})
+    local a = graded[before + 1]
+    local code = a and a.error and a.error.code or nil
+    local gap = a and a.followup and a.followup.gap
+    local good = a ~= nil and a.ok == case[5] and code == case[6] and gap == case[7]
+    failures = failures + (good and 0 or 1)
+    local line = a
+        and string.format(
+          "%s %s: %s ok=%s %s gap=%s | %s",
+          good and "PASS" or "FAIL",
+          case[1],
+          a.move,
+          tostring(a.ok),
+          code or "",
+          tostring(gap),
+          a.error and a.error.text or ""
+        )
+      or string.format("FAIL %s: no attempt graded", case[1])
+    table.insert(report, line)
+    print(line)
+    if snapshots and a then
+      manager.machine.video:snapshot()
+    end
+  end
+  return failures
+end
+
 local function parry_cases(report)
   local failures = 0
   app:choose({ id = "ryu:parry", name = "parry" })
@@ -94,11 +159,9 @@ local function parry_cases(report)
   S.wait(70)
   S.hold({})
   S.wait(30)
-  manager.machine:save("parry")
-  S.wait(2)
+  S.save("parry")
   for _, case in ipairs(PARRY_CASES) do
-    manager.machine:load("parry")
-    S.wait(2)
+    S.load("parry")
     local before = #graded
     for f = 1, 45 do
       S.hold_raw(f == case[3] and case[4] or 0, (f == 15 or f == 16) and case[2] or 0)
@@ -180,6 +243,7 @@ S.spawn(function()
     app:toggle_menu()
   end
   failures = failures + parry_cases(report)
+  failures = failures + followup_cases(report)
   table.insert(report, failures == 0 and "all cases pass" or (failures .. " case(s) failed"))
   local f = io.open(out_path, "w")
   f:write(table.concat(report, "\n") .. "\n")

@@ -147,6 +147,25 @@ subscription = emu.add_machine_frame_notifier(function()
 end)
 M.subscription = subscription
 
+-- MAME loads a state between frames, and drops a load or save scheduled next to another one, so
+-- loading retries until P1 is back to standing.
+function M.load(name)
+  for _ = 1, 10 do
+    machine:load(name)
+    M.wait(4)
+    if M.s16(M.ADDR.p1_base + 0x26) == 0 and M.s16(M.ADDR.p1_base + 0x28) == 1 then
+      M.wait(4)
+      return
+    end
+  end
+  error("could not load state " .. name)
+end
+
+function M.save(name)
+  machine:save(name)
+  M.wait(4)
+end
+
 function M.exit()
   machine:exit()
 end

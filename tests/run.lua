@@ -11,6 +11,7 @@ local files = {
   "test_run",
   "test_parry",
   "test_mash",
+  "test_followup",
 }
 
 local passed, failed = 0, {}

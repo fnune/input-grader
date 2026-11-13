@@ -13,6 +13,7 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
 - **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
 - **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted.
+- **Timing after a dash**: target DASH > THROW, DASH > BUTTON or BACK DASH > BUTTON. The card times your first press against the first frame the dash lets you act: FRAME-PERFECT, how many frames late, or how many early (the game drops an early press). For throws it also says when LP and LK were split or the throw was out of range.
 - **Mash moves**: Chun-Li's Hyakuretsukyaku, the one move started by mashing, gets a card with a slot per press: five of one kick strength, or why not (too few, or strengths mixed, which the game does not add up).
 - **Parry practice**: target PARRY and let the opponent attack (another player, or the training mode's recorded dummy). Each hit gets a card: the direction the attack needed, your tap, and where the hit landed in your 10-frame window, or how many frames early or late you were. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
@@ -149,7 +150,7 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 - P2 support, so you can grade from either side of a netplay or training session.
 - A training journal: progress per move over days and weeks, built from the attempt log.
 - Red parry detail: the card says when a parry needed the shorter red window, but not yet whether the attack counted as a normal (3 frames) or a special (2 frames).
-- Grading timing after an action, starting with dash into throw: whether the throw came before you could act, whether LP and LK were pressed together, and range or throw invulnerability.
+- More actions before a press: landing from a jump, the end of blockstun (reversals) and waking up. Each needs its own routine and first actionable frame measured; the follow-up tracker and card already take any action.
 - A move cheatsheet on a hotkey: the current character's specials and selected super art, drawn with the same icons as the grid, with each step's window and the optional last directions. The command tables already hold everything it needs.
 - A pinned FBNeo build under Wine in the flake, to try the script without Fightcade. FBNeo's Lua only exists in its Windows build, and its command line takes a game or a script but not both, so this would be a manual check rather than an automated one.
 - Other games, using the porting interfaces.

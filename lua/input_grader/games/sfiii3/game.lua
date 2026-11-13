@@ -2,6 +2,7 @@ local bits = require("input_grader.core.bits")
 local History = require("input_grader.core.history")
 local C = require("input_grader.games.sfiii3.constants")
 local inputs = require("input_grader.games.sfiii3.inputs")
+local Followup = require("input_grader.games.sfiii3.followup")
 local Parry = require("input_grader.games.sfiii3.parry")
 local Tracker = require("input_grader.games.sfiii3.tracker")
 
@@ -34,6 +35,27 @@ local LEVER_STEPS = {
   [CK.LEVER_REPEAT] = true,
   [CK.LEVER_COUNT] = true,
 }
+
+local ALL_BUTTONS = { C.SW_LP, C.SW_MP, C.SW_HP, C.SW_LK, C.SW_MK, C.SW_HK }
+
+local function button_names(word)
+  local names = {}
+  for _, sw in ipairs(ALL_BUTTONS) do
+    if has(word, sw) then
+      table.insert(names, inputs.buttons_text(sw))
+    end
+  end
+  return names
+end
+
+local function has_name(list, name)
+  for _, n in ipairs(list) do
+    if n == name then
+      return true
+    end
+  end
+  return false
+end
 
 local DIAGONALS = { [1] = true, [3] = true, [7] = true, [9] = true }
 
@@ -89,6 +111,12 @@ function Game:set_target(id)
   self.options.target = id
 end
 
+local FOLLOWUPS = {
+  { action = "forward_dash", press = "throw", name = "throw" },
+  { action = "forward_dash", press = "any", name = "button" },
+  { action = "back_dash", press = "any", name = "button" },
+}
+
 -- Parries, mashing and the "down" slots only mean something against the opponent's actions.
 local SOLO_SYSTEM_SLOTS = { [0] = "forward dash", [1] = "back dash", [2] = "high jump" }
 
@@ -115,6 +143,16 @@ function Game:moves()
   table.sort(list, function(a, b)
     return a.slot < b.slot
   end)
+  for _, f in ipairs(FOLLOWUPS) do
+    table.insert(list, {
+      id = self.fighter.name .. ":after:" .. f.action .. ":" .. f.press,
+      name = Followup.ACTIONS[f.action].name .. " > " .. f.name,
+      notation = "",
+      slot = -1,
+      buttonless = true,
+      other = true,
+    })
+  end
   table.insert(list, {
     id = self.fighter.name .. ":parry",
     name = "parry",
@@ -187,6 +225,7 @@ function Game:rebuild(obs)
   end
   self.tracker = Tracker.new(tracked)
   self.parry = Parry.new()
+  self.followup = Followup.new()
   self.mash_runs = {}
   self.pending = nil
 end
@@ -226,6 +265,13 @@ function Game:update()
   local judged = self.parry:update({ flag = obs.state.flag, contact = obs.contact })
   if judged and self.options.target == self.fighter.name .. ":parry" then
     table.insert(graded, self:parry_attempt(judged, obs))
+  end
+  if obs.routine then
+    local done = self.followup:update({ routine = obs.routine, cg_type = obs.cg_type, pressed = button_names(pressed) })
+    local attempt = done and self:followup_attempt(done, obs)
+    if attempt then
+      table.insert(graded, attempt)
+    end
   end
   local mashed = self:mash_attempt(obs, pressed)
   if mashed then
@@ -533,6 +579,55 @@ end
 
 -- Each step needs a frame of its own, except one that follows a release: letting go of 6 and
 -- pressing 2 can happen on the same frame.
+-- The first press after an action (a dash), graded against the first frame the action lets the
+-- player act: early presses are dropped by the game, late ones cost time.
+function Game:followup_attempt(done, obs)
+  local prefix = self.fighter.name .. ":after:" .. done.action .. ":"
+  local target = self.options.target or ""
+  if target:sub(1, #prefix) ~= prefix or not done.press or not done.actionable then
+    return nil
+  end
+  local wants_throw = target:sub(#prefix + 1) == "throw"
+  local buttons = done.press.buttons
+  local gap = done.press.frame - done.actionable
+  local ok = gap >= 0 and (done.result == "threw" or (not wants_throw and done.result == "attacked"))
+  local error
+  if gap < 0 then
+    error = { code = "followup_early", text = "pressed " .. -gap .. " frames before you could act", frames = -gap }
+  elseif ok then
+    error = nil
+  elseif wants_throw and not (has_name(buttons, "LP") and has_name(buttons, "LK")) then
+    error = { code = "throw_split", text = "LP and LK must be pressed on the same frame" }
+  elseif wants_throw and done.result ~= "threw" then
+    error = { code = "throw_whiff", text = "the throw missed: out of range" }
+  elseif not ok then
+    error = { code = "not_allowed", text = "the press came in time; nothing started" }
+  end
+  local action = Followup.ACTIONS[done.action].name
+  return {
+    game = "sfiii3",
+    character = self.fighter.name,
+    id = target,
+    move = action .. " > " .. (wants_throw and "throw" or "button"),
+    notation = "",
+    frame = self.frame,
+    side = obs.facing_right and "right" or "left",
+    ok = ok,
+    error = error,
+    steps = { { label = action }, { label = table.concat(buttons, "+"), used = gap } },
+    total = math.max(gap, 0),
+    minimum = 0,
+    followup = {
+      action = done.action,
+      gap = gap,
+      buttons = buttons,
+      need = wants_throw and { "LP", "LK" } or nil,
+      result = done.result,
+    },
+    trace = { frames = {}, steps = {} },
+  }
+end
+
 local MASH_NEED, MASH_GAP, MASH_MIN_UNTARGETED = 5, 15, 4
 local PUNCHES = { C.SW_LP, C.SW_MP, C.SW_HP }
 local KICKS = { C.SW_LK, C.SW_MK, C.SW_HK }

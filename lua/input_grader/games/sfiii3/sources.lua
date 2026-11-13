@@ -83,6 +83,8 @@ function RamSource:poll()
   self.contact = nil
   return {
     contact = contact,
+    routine = { r1, r2 },
+    cg_type = self.mem.u8(base + ram.CG_TYPE),
     raw = raw,
     facing_right = ctx.facing_right,
     airborne = ctx.airborne,

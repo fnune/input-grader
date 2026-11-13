@@ -89,7 +89,10 @@ end
 --- "missed", "out", "clean" (every input used at most half its window) or "perfect" (the
 --- fastest possible).
 function M.kind(attempt)
-  if attempt and (attempt.parry or (attempt.mash and not refused(attempt))) then
+  if attempt and attempt.followup and attempt.ok then
+    return attempt.followup.gap == 0 and "perfect" or (attempt.followup.gap <= 2 and "clean" or "out")
+  end
+  if attempt and (attempt.parry or attempt.followup or (attempt.mash and not refused(attempt))) then
     return attempt.ok and "out" or "missed"
   end
   if attempt and refused(attempt) then
@@ -402,6 +405,100 @@ local function draw_mash(canvas, attempt, opts)
   return { x0 = x0, x1 = x1, y0 = y0, y1 = y0 + height }
 end
 
+local FOLLOWUP_DIRS = { forward_dash = { 6, 6 }, back_dash = { 4, 4 } }
+local FOLLOWUP_REASON = {
+  followup_early = function(e)
+    return { e.frames .. "F EARLY" }
+  end,
+  throw_split = function()
+    return { "SPLIT" }
+  end,
+  throw_whiff = function()
+    return { "OUT OF RANGE" }
+  end,
+}
+
+local function followup_reason(attempt)
+  local e, gap = attempt.error, attempt.followup.gap
+  if e then
+    return (FOLLOWUP_REASON[e.code] or function()
+      return { SHORT[e.code] or e.code }
+    end)(e)
+  end
+  return { gap == 0 and "FRAME-PERFECT" or (gap .. "F LATE") }
+end
+
+-- The timing of a press against the first frame the action let the player act: a tick there, one
+-- cell per frame, red before it, green on it, orange after.
+local function draw_timing(canvas, mid, y, gap, left, width, ok)
+  local cell = 4
+  local zero = mid
+  local label = gap == 0 and "0F" or ((gap > 0 and "+" or "") .. gap .. "F")
+  local c = (gap < 0 or not ok) and COL.bad or (gap == 0 and COL.gold or (gap <= 2 and COL.good or COL.warn))
+  canvas:text(mid - #label * 2, y, label, c)
+  canvas:box(left, y + 9, left + width - 1, y + 11, COL.cell, COL.edge)
+  local at = math.max(left, math.min(left + width - cell, zero + gap * cell))
+  canvas:box(at, y + 9, at + cell - 1, y + 11, c, c)
+  canvas:line(zero, y + 7, zero, y + 13, COL.text)
+end
+
+-- An action and the press after it: the action's directions, then the buttons the target wants
+-- (or the ones pressed), with the press timed against the first frame the action allowed one.
+local function draw_followup(canvas, attempt, opts)
+  local x0, y0, height = opts.x0, opts.y0, M.HEIGHT
+  local fu, ok = attempt.followup, attempt.ok
+  local perfect = ok and fu.gap == 0
+  local verdict = perfect and COL.gold or (ok and COL.good or COL.bad)
+  local col_w = draw.CHAR_W * 9
+  local x1 = x0 + M.PAD + col_w * 2 + M.GAP + M.PAD
+  local ty = y0 - M.NAME_H + 2
+  local name_x = x0 + 1
+  if opts.target then
+    canvas:text(x0 + 1, ty, "TARGET", COL.dim)
+    name_x = x0 + 1 + draw.CHAR_W * 7
+  end
+  local name = attempt.move:upper()
+  canvas:text(name_x, ty, name, COL.text)
+  local reason_c = perfect and COL.gold or (ok and COL.dim or COL.bad)
+  draw.inline(canvas, name_x + draw.CHAR_W * #name + 6, ty, followup_reason(attempt), reason_c)
+
+  draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)
+  draw.rbox(canvas, x0 + 1, y0 + 1, x1 - 1, y0 + height - 1, draw.alpha(verdict, 0x28))
+  local ny, ry, my = y0 + 11, y0 + 23, y0 + 37
+  local act_mid = x0 + M.PAD + math.floor(col_w / 2)
+  local press_left = x0 + M.PAD + col_w + M.GAP
+  local press_mid = press_left + math.floor(col_w / 2)
+  canvas:line(press_left - M.GAP / 2, y0 + M.PAD, press_left - M.GAP / 2, y0 + height - M.PAD, COL.divider)
+
+  draw.rbox(canvas, act_mid - 14, ny - 7, act_mid + 14, ny + 7, draw.alpha(COL.good, 0x40), COL.good)
+  local dirs = FOLLOWUP_DIRS[fu.action] or { 6, 6 }
+  draw.icon(canvas, dirs[1], act_mid - 12, ny - 5, 11)
+  draw.icon(canvas, dirs[2], act_mid + 1, ny - 5, 11)
+  local action_word = "DASH"
+  canvas:text(act_mid - 2 * #action_word, ry + 1, action_word, COL.dim)
+
+  local need = fu.need or fu.buttons
+  local press_c = ok and verdict or COL.bad
+  local slot_half = 4 + 6 * #need
+  draw.rbox(canvas, press_mid - slot_half, ny - 7, press_mid + slot_half, ny + 7, draw.alpha(press_c, 0x40), press_c)
+  for i, b in ipairs(need) do
+    draw.icon(canvas, b, press_mid - slot_half + 3 + (i - 1) * 12, ny - 5, 11)
+  end
+  local pressed_parts = {}
+  for i, b in ipairs(fu.buttons) do
+    if i > 1 then
+      table.insert(pressed_parts, "+")
+    end
+    table.insert(pressed_parts, { btn = b })
+  end
+  draw.inline(canvas, press_mid - math.floor(draw.parts_width(pressed_parts) / 2), ry + 1, pressed_parts, COL.text)
+  draw_timing(canvas, press_mid, my, fu.gap, press_left, col_w, ok)
+  if perfect then
+    draw.star(canvas, x1 - 5, y0 - 3)
+  end
+  return { x0 = x0, x1 = x1, y0 = y0, y1 = y0 + height }
+end
+
 --- Draws the card for `attempt` with its box's top-left at (opts.x0, opts.y0). opts.target marks
 --- a targeted move; opts.max_x1 caps the right edge. Returns the box { x0, x1, y0, y1 }.
 function M.draw(canvas, attempt, opts)
@@ -410,6 +507,9 @@ function M.draw(canvas, attempt, opts)
   end
   if attempt.mash then
     return draw_mash(canvas, attempt, opts)
+  end
+  if attempt.followup then
+    return draw_followup(canvas, attempt, opts)
   end
   local t = attempt.trace
   local x0, y0, height = opts.x0, opts.y0, M.HEIGHT

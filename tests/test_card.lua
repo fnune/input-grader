@@ -205,6 +205,24 @@ return {
     end,
   },
   {
+    "a dash > throw card: the press timed against the first frame to act",
+    function()
+      local a = {
+        move = "dash > throw",
+        ok = true,
+        followup = { action = "forward_dash", gap = 0, buttons = { "LP", "LK" }, need = { "LP", "LK" } },
+      }
+      T.eq(card.kind(a), "perfect")
+      local c = drawn(a)
+      T.truthy(c:has_text("FRAME-PERFECT"), "reason")
+      T.truthy(c:has_line(COL.gold), "gold box")
+      a.ok, a.followup.gap, a.error = false, -1, { code = "followup_early", frames = 1 }
+      c = drawn(a)
+      T.truthy(c:has_text("1F EARLY"), "early by a frame")
+      T.truthy(c:has_text("-1F"), "timing")
+    end,
+  },
+  {
     "pearls: one per attempt, the shown one lifted",
     function()
       local list = { attempt(CLEAN), attempt(SKIP), attempt(CLEAN) }

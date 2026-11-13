@@ -100,6 +100,8 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `parry_early`, `parry_late` | The parry tap came before the window could reach the hit, or after the hit |
 | `parry_direction` | The tap was forward against a low attack, or down against one that is only high |
 | `no_parry` | The attack connected with no tap |
+| `followup_early` | The press after a dash came before the dash let you act; the game dropped it |
+| `throw_split`, `throw_whiff` | LP and LK did not land together, or the throw was out of range |
 | `mash_short`, `mash_mixed` | Fewer than five presses of one strength, or five split across strengths |
 | `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |
 
@@ -113,6 +115,16 @@ The game parries in `defense_ground` and `defense_sky` (`HITCHECK.C`): when an a
 - Right after blocking (`guard_chuu` 1 to 4) a red parry needs the flag at least 9 (specials) or 8 (normals), from `blocking_term_tbl`: 2 or 3 frames.
 
 The grader watches the flags and P1's routine (`routine_no` 0.31 to 0.35 parried, 1.x hit or blocked), and grades each contact a few frames later so a late tap is seen. The live cases in `harness/mame/grade.lua` cover a parry in the window, too early, too late, the wrong direction and a low parry.
+
+## Timing after a dash
+
+`harness/mame/throw.lua` measured Ryu's dashes and throws:
+
+- A forward dash is P1 routine 0.5, a back dash 0.6. Each frame of animation carries a type (`cg_type`, player + 0x215); in RAM, a press seen on a frame whose type is 2, 3 or 64 starts a move, and an earlier press is dropped. After a forward dash that is 12 frames after its last input.
+- A throw starts as routine 4.14 and becomes 2.2 (throwing) two frames later when in range; out of range it stays 4.14, the whiff.
+- From standing, LP and LK must land on the same frame: LK one frame later gives a jab. Right after a dash the game also threw on LP then LK one frame later, so the grader judges a throw by its outcome and only calls the buttons split when no throw came.
+
+The follow-up targets grade the first press after the dash against that first frame. The live cases in `harness/mame/grade.lua` cover a throw on the first frame, one frame early, three late, LP and LK two frames apart, and out of range.
 
 ## Mash moves
 

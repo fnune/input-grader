@@ -196,11 +196,16 @@ input.registerhotkey(6, function()
   toggle_menu("Lua Hotkey 6")
 end)
 
+-- The player's real controls this frame, read before they are blocked: once joypad.set has
+-- cleared them, joypad.get returns the cleared values too.
+local live_pad = {}
+
 emu.registerbefore(function()
+  live_pad = joypad.get()
   if menu_open then
     -- Block P1's controls so the character stands still while the stick moves the menu.
     local blocked = {}
-    for name in pairs(joypad.get()) do
+    for name in pairs(live_pad) do
       if name:sub(1, 3) == "P1 " then
         blocked[name] = false
       end
@@ -210,7 +215,7 @@ emu.registerbefore(function()
 end)
 
 emu.registerafter(function()
-  local pad = joypad.get()
+  local pad = live_pad
   for name, down in pairs(pad) do
     if down and name:sub(1, 3) == "P1 " and not seen_joypad[name] then
       seen_joypad[name] = true

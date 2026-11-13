@@ -152,9 +152,6 @@ function M.new(env)
   function p.hotkey(n, fn)
     input.registerhotkey(n, fn)
   end
-  function p.clock()
-    return emu.framecount() / 60
-  end
   function p.timestamp()
     return env.os.date("!%Y-%m-%dT%H:%M:%SZ")
   end

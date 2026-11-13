@@ -1,9 +1,8 @@
 local App = require("input_grader.core.app")
-local Bench = require("input_grader.core.bench")
 local card = require("input_grader.core.card")
 local draw = require("input_grader.core.draw")
 local pearls = require("input_grader.core.pearls")
-local picker = require("input_grader.core.picker")
+local menu = require("input_grader.core.menu")
 local Game = require("input_grader.games.sfiii3.game")
 local sources = require("input_grader.games.sfiii3.sources")
 local inputs = require("input_grader.games.sfiii3.inputs")
@@ -206,24 +205,26 @@ return {
     end,
   },
   {
-    "picker rows: ALL MOVES, specials, then other moves after a divider",
+    "menu rows: HIDE OVERLAY, then the targets: ALL MOVES, specials, other moves after a divider",
     function()
-      local rows = picker.rows({
+      local rows = menu.rows({
         { id = "ryu:0", name = "forward dash", notation = "", buttonless = true, other = true },
         { id = "ryu:29", name = "Hadoken", notation = "236+P" },
         { id = "ryu:29b", name = "Hadoken", notation = "236+P" },
         { id = "ryu:8", name = "punch mashing", notation = "longer window", other = true },
       })
-      T.eq(rows[1].name, "ALL MOVES")
-      T.eq(rows[2].name, "Hadoken")
-      T.eq(rows[3].divider, true)
-      T.eq(rows[4].name, "forward dash")
-      T.eq(rows[5].notation, "")
-      T.eq(#picker.selectable(rows), 4)
+      T.eq(rows[1].action, "hide")
+      T.eq(rows[2].divider, true)
+      T.eq(rows[3].name, "ALL MOVES")
+      T.eq(rows[4].name, "Hadoken")
+      T.eq(rows[5].divider, true)
+      T.eq(rows[6].name, "forward dash")
+      T.eq(rows[7].notation, "")
+      T.eq(#menu.selectable(rows), 5)
     end,
   },
   {
-    "app: M opens the picker and blocks input, the stick moves, LP picks the target",
+    "app: M opens the menu on ALL MOVES and blocks input, the stick moves, LP picks the target",
     function()
       local target
       local game = {
@@ -242,12 +243,6 @@ return {
       }
       local app = App.new({
         game = game,
-        bench = Bench.new(function()
-          return 0
-        end),
-        clock = function()
-          return 0
-        end,
       })
       app:controls({ M = true }, {})
       T.eq(app:blocks_input(), true)
@@ -261,7 +256,57 @@ return {
     end,
   },
   {
-    "app: Page Up shows older attempts, a new attempt returns to the latest, B and H toggle",
+    "app: a target keeps its success count and rate, refused inputs counting as good, reset on a new target",
+    function()
+      local queue = {}
+      local game = {
+        update = function()
+          local out = queue
+          queue = {}
+          return out
+        end,
+        moves = function()
+          return { { id = "ryu:29", name = "Hadoken", notation = "236+P" } }
+        end,
+        set_target = function() end,
+      }
+      local app = App.new({ game = game })
+      app:choose({ id = "ryu:29", name = "Hadoken" })
+      local refused = attempt(CLEAN)
+      refused.ok, refused.error = false, { code = "not_allowed", text = "" }
+      queue = { attempt(CLEAN), attempt(SKIP), refused }
+      app:frame()
+      T.eq(app:tally_text(), "2/3  67%")
+      local c = canvas()
+      app:draw(c)
+      T.truthy(c:has_text("2/3  67%"), "drawn above the card")
+      app:choose({ id = "ryu:29", name = "Hadoken" })
+      T.eq(app:tally_text(), "0/0")
+    end,
+  },
+  {
+    "app: the menu's HIDE OVERLAY row hides the overlay",
+    function()
+      local app = App.new({
+        game = {
+          update = function()
+            return {}
+          end,
+          moves = function()
+            return {}
+          end,
+          set_target = function() end,
+        },
+      })
+      app:controls({ M = true }, {})
+      app:controls({}, { up = true })
+      app:controls({}, {})
+      app:controls({}, { LP = true })
+      T.eq(app.visible, false)
+    end,
+  },
+  {
+    "app: Page Up shows older attempts, a new attempt returns to the latest, H toggles",
     function()
       local queue = {}
       local game = {
@@ -275,16 +320,7 @@ return {
         end,
         set_target = function() end,
       }
-      local bench = Bench.new(function()
-        return 0
-      end)
-      local app = App.new({
-        game = game,
-        bench = bench,
-        clock = function()
-          return 0
-        end,
-      })
+      local app = App.new({ game = game })
       queue = { attempt(CLEAN), attempt(SKIP) }
       app:frame()
       app:controls({ pageup = true }, {})
@@ -292,8 +328,6 @@ return {
       queue = { attempt(CLEAN) }
       app:frame()
       T.eq(app.shown, nil)
-      app:controls({ B = true }, {})
-      T.eq(bench.running, true)
       app:controls({ H = true }, {})
       T.eq(app.visible, false)
       local c = canvas()
@@ -318,12 +352,6 @@ return {
       }
       local app = App.new({
         game = game,
-        bench = Bench.new(function()
-          return 0
-        end),
-        clock = function()
-          return 0
-        end,
       })
       local function name_alpha()
         local c = canvas()
@@ -343,8 +371,6 @@ return {
       queue = { attempt(CLEAN) }
       app:frame()
       T.eq(name_alpha(), bright, "a new card is bright")
-      app:controls({ B = true }, {})
-      T.truthy(name_alpha() < bright, "the card from before the bench is dimmed")
     end,
   },
   {
@@ -361,12 +387,6 @@ return {
           end,
           set_target = function() end,
         },
-        bench = Bench.new(function()
-          return 0
-        end),
-        clock = function()
-          return 0
-        end,
         active = function()
           return in_match
         end,
@@ -396,12 +416,6 @@ return {
       }
       local app = App.new({
         game = game,
-        bench = Bench.new(function()
-          return 0
-        end),
-        clock = function()
-          return 0
-        end,
       })
       local c = canvas()
       app:draw(c)

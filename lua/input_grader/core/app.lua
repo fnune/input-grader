@@ -1,17 +1,16 @@
-local bench_panel = require("input_grader.core.bench_panel")
 local card = require("input_grader.core.card")
 local csv = require("input_grader.core.csv")
 local draw = require("input_grader.core.draw")
 local layout = require("input_grader.core.layout")
+local menu = require("input_grader.core.menu")
 local pearls = require("input_grader.core.pearls")
-local picker = require("input_grader.core.picker")
 
 local COL = draw.COL
 local App = {}
 App.__index = App
 
 App.HISTORY = 20
-App.HELP = "M TARGET  B BENCH  H HIDE  PGUP/DN HISTORY"
+App.HELP = "M MENU"
 App.LEGEND_X, App.LEGEND_Y = 4, 49
 App.CARD_Y = 145
 App.STALE_AFTER = 30
@@ -19,11 +18,11 @@ App.STALE_FADE = 0.4
 
 local BUTTONS = { "LP", "MP", "HP", "LK", "MK", "HK" }
 
---- @param deps table { game, bench, clock = fn() -> seconds, timestamp = fn() -> string,
----   log = fn(line)|nil, avoid = rectangles to keep clear (the input display), y = card top }
+--- @param deps table { game, timestamp = fn() -> string, log = fn(line)|nil,
+---   avoid = rectangles to keep clear (the input display), y = card top, active = fn() -> bool }
 function App.new(deps)
   local self = setmetatable({}, App)
-  self.game, self.bench, self.clock, self.log = deps.game, deps.bench, deps.clock, deps.log
+  self.game, self.log = deps.game, deps.log
   self.timestamp = deps.timestamp or function()
     return ""
   end
@@ -34,33 +33,42 @@ function App.new(deps)
   self.card_y = deps.y or App.CARD_Y
   self.attempts, self.shown = {}, nil
   self.visible = true
-  self.picker_open, self.pick = false, 1
-  self.target = nil
+  self.menu_open, self.pick = false, 1
+  self.target, self.tally = nil, { ok = 0, n = 0 }
   self.prev_keys, self.prev_pad = {}, {}
-  self.tick, self.unanswered_press_at, self.card_predates_bench = 0, nil, false
+  self.tick, self.unanswered_press_at = 0, nil
   return self
+end
+
+-- An input the game refused (busy, a fireball on screen) was still the right input.
+local function good_input(attempt)
+  return attempt.ok or (attempt.error ~= nil and attempt.error.code == "not_allowed")
 end
 
 function App:frame()
   self.tick = self.tick + 1
   for _, attempt in ipairs(self.game:update()) do
-    self.unanswered_press_at, self.card_predates_bench = nil, false
+    self.unanswered_press_at = nil
     table.insert(self.attempts, attempt)
     if #self.attempts > App.HISTORY then
       table.remove(self.attempts, 1)
     end
     self.shown = nil
-    self.bench_result = nil
-    self.bench:record(attempt)
+    if self.target and attempt.id == self.target.id then
+      self.tally.n = self.tally.n + 1
+      if good_input(attempt) then
+        self.tally.ok = self.tally.ok + 1
+      end
+    end
     if self.log then
       self.log(csv.row(self.timestamp(), attempt))
     end
   end
 end
 
---- Whether the player's controls should be kept from the game this frame (the picker is open).
+--- Whether the player's controls should be kept from the game this frame (the menu is open).
 function App:blocks_input()
-  return self.picker_open
+  return self.menu_open
 end
 
 local function pressed(now, before, name)
@@ -72,14 +80,14 @@ end
 function App:controls(keys, pad)
   local k, p = keys or {}, pad or {}
   if not self.active() then
-    self.picker_open = false
+    self.menu_open = false
     self.prev_keys, self.prev_pad = k, p
     return
   end
   if pressed(k, self.prev_keys, "M") then
-    self:toggle_picker()
-  elseif self.picker_open then
-    local rows = picker.selectable(picker.rows(self.game:moves()))
+    self:toggle_menu()
+  elseif self.menu_open then
+    local rows = menu.selectable(menu.rows(self.game:moves()))
     if pressed(p, self.prev_pad, "down") then
       self.pick = self.pick % #rows + 1
     elseif pressed(p, self.prev_pad, "up") then
@@ -87,18 +95,15 @@ function App:controls(keys, pad)
     elseif pressed(p, self.prev_pad, "LP") then
       self:choose(rows[self.pick])
     elseif pressed(p, self.prev_pad, "LK") then
-      self.picker_open = false
+      self.menu_open = false
     end
   end
-  if not self.picker_open and not self.unanswered_press_at then
+  if not self.menu_open and not self.unanswered_press_at then
     for _, b in ipairs(BUTTONS) do
       if pressed(p, self.prev_pad, b) then
         self.unanswered_press_at = self.tick
       end
     end
-  end
-  if pressed(k, self.prev_keys, "B") then
-    self:toggle_bench()
   end
   if pressed(k, self.prev_keys, "H") then
     self:toggle_visible()
@@ -111,13 +116,15 @@ function App:controls(keys, pad)
   self.prev_keys, self.prev_pad = k, p
 end
 
-function App:toggle_picker()
-  self.picker_open = not self.picker_open
-  if self.picker_open then
+function App:toggle_menu()
+  self.menu_open = not self.menu_open
+  if self.menu_open then
+    local rows = menu.selectable(menu.rows(self.game:moves()))
     self.pick = 1
-    local rows = picker.selectable(picker.rows(self.game:moves()))
     for i, r in ipairs(rows) do
-      if self.target and r.id == self.target.id then
+      local is_target = self.target and r.id == self.target.id
+      local is_all = not self.target and not r.action and not r.id
+      if is_target or (is_all and self.pick == 1) then
         self.pick = i
       end
     end
@@ -125,19 +132,14 @@ function App:toggle_picker()
 end
 
 function App:choose(row)
-  self.target = row and row.id and row or nil
-  self.game:set_target(self.target and self.target.id or nil)
-  self.picker_open = false
-end
-
-function App:toggle_bench()
-  if self.bench.running then
-    self.bench_result = self.bench:stop()
-  else
-    self.bench_result = nil
-    self.bench:start(self.target and self.target.id or nil)
-    self.card_predates_bench = true
+  self.menu_open = false
+  if row and row.action == "hide" then
+    self.visible = false
+    return
   end
+  self.target = row and row.id and row or nil
+  self.tally = { ok = 0, n = 0 }
+  self.game:set_target(self.target and self.target.id or nil)
 end
 
 function App:toggle_visible()
@@ -153,35 +155,40 @@ function App:browse(step)
   self.shown = at < #self.attempts and at or nil
 end
 
---- Whether the latest card no longer answers what the player did: a button since then got no
---- card, or the bench started after it.
+--- Whether the latest card no longer answers what the player did: a button since then got no card.
 function App:stale()
-  if self.shown then
+  if self.shown or not self.unanswered_press_at then
     return false
   end
-  local unanswered = self.unanswered_press_at and self.tick - self.unanswered_press_at >= App.STALE_AFTER
-  return self.card_predates_bench or unanswered or false
+  return self.tick - self.unanswered_press_at >= App.STALE_AFTER
+end
+
+--- The target's success count and rate since it was picked: "14/20  70%".
+function App:tally_text()
+  local t = self.tally
+  if t.n == 0 then
+    return "0/0"
+  end
+  return t.ok .. "/" .. t.n .. "  " .. math.floor(100 * t.ok / t.n + 0.5) .. "%"
 end
 
 function App:draw(canvas)
   if not self.visible or not self.active() then
     return
   end
-  if self.picker_open then
-    picker.draw(canvas, picker.rows(self.game:moves()), self.pick)
+  if self.menu_open then
+    menu.draw(canvas, menu.rows(self.game:moves()), self.pick)
     return
   end
-  if self.bench_result then
-    bench_panel.draw(canvas, self.bench_result)
-    return
-  end
+  canvas:text(App.LEGEND_X, App.LEGEND_Y, App.HELP, COL.dim)
   local fit = layout.panel(self.card_y - 22, self.card_y + card.HEIGHT, self.avoid)
+  if self.target then
+    local y = self.card_y - card.NAME_H - 9
+    local x = draw.inline(canvas, fit.x1 + 1, y, { self.target.name:upper() .. "  " }, COL.dim)
+    canvas:text(x, y, self:tally_text(), COL.gold)
+  end
   local shown = self.shown or #self.attempts
   local attempt = self.attempts[shown]
-  canvas:text(App.LEGEND_X, App.LEGEND_Y, App.HELP, COL.dim)
-  if self.bench.running then
-    canvas:text(fit.x1 + 1, self.card_y - card.NAME_H - 9, bench_panel.counter(self.bench:summary()), COL.gold)
-  end
   if not attempt then
     return
   end

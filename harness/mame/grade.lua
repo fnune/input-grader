@@ -80,7 +80,6 @@ local CASES = {
 
 S.spawn(function()
   S.boot_to_match(0)
-  app:toggle_bench()
   local report, failures = {}, 0
   for i, case in ipairs(CASES) do
     local before = #graded
@@ -121,14 +120,11 @@ S.spawn(function()
     end
     local _ = i
   end
-  app:toggle_bench()
-  S.wait(4)
   if snapshots then
+    app:toggle_menu()
+    S.wait(2)
     manager.machine.video:snapshot()
-  end
-  local summary = app.bench:summary()
-  for _, m in ipairs(summary.moves) do
-    table.insert(report, string.format("bench %s: %d/%d", m.name, m.ok, m.n))
+    app:toggle_menu()
   end
   table.insert(report, failures == 0 and "all cases pass" or (failures .. " case(s) failed"))
   local f = io.open(out_path, "w")

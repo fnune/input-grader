@@ -19,4 +19,4 @@ end
 
 local app = require("input_grader.games.sfiii3").build(platform, { log_path = GRADER .. "logs/attempts.csv" })
 require("input_grader.core.run").attach(platform, app)
-print("input_grader loaded: M target, B bench, H hide, Page Up/Down history")
+print("input_grader loaded: M menu, H hide, Page Up/Down history")

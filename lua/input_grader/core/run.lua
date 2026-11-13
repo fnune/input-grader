@@ -1,6 +1,6 @@
 local M = {}
 
-M.HOTKEYS = { bench = 7, target = 8, visible = 9 }
+M.HOTKEYS = { menu = 8, visible = 9 }
 
 local function guarded(platform, name, fn)
   local reported = false
@@ -30,15 +30,9 @@ function M.attach(platform, app)
   end))
   if platform.hotkey then
     platform.hotkey(
-      M.HOTKEYS.bench,
-      guarded(platform, "bench", function()
-        app:toggle_bench()
-      end)
-    )
-    platform.hotkey(
-      M.HOTKEYS.target,
-      guarded(platform, "target", function()
-        app:toggle_picker()
+      M.HOTKEYS.menu,
+      guarded(platform, "menu", function()
+        app:toggle_menu()
       end)
     )
     platform.hotkey(

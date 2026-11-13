@@ -4,7 +4,7 @@ The grader is split so the parts that know nothing about 3rd Strike can be reuse
 
 ```
 lua/input_grader/
-  core/              game-agnostic: app, card, pearls, picker, bench, drawing, font, CSV, input history, hooks, run
+  core/              game-agnostic: app, card, pearls, menu, drawing, font, CSV, input history, hooks, run
   platform/          one adapter per emulator: fbneo.lua (players), mame.lua (tests, screenshots)
   games/sfiii3/      everything 3rd Strike: tables, RAM map, checker port, tracker, grader
 ```
@@ -27,11 +27,10 @@ What `core/run.lua` and the game modules need from an emulator. See `platform/fb
 | `on_before(fn)` | | Optional: call `fn` before every frame, while the inputs can still be changed |
 | `keys()` | `-> {name = true}` | Keyboard keys held, as FBNeo's `input.get()` names them (`M`, `pageup`) |
 | `pad()` | `-> {up, down, left, right, LP, ..., HK}` | The player's real controls, read before anything blocks them |
-| `block()` | | Keep the player's controls from the game this frame (while the picker is open) |
+| `block()` | | Keep the player's controls from the game this frame (while the menu is open) |
 | `on_frame(fn)` | | Call `fn` after every emulated frame |
 | `on_draw(fn)` | | Call `fn` when the overlay should draw |
 | `hotkey(n, fn)` | | Optional: bind FBNeo's Lua Hotkey `n` |
-| `clock()` | `-> seconds` | Emulated time |
 | `timestamp()` | `-> string` | Wall-clock time for the log |
 | `appender(path, header)` | `-> fn(line)` | Append lines to a file |
 | `print(s)` | | Report to the user |
@@ -45,17 +44,17 @@ What `core/app.lua` consumes.
 | Member | Purpose |
 | --- | --- |
 | `game:update() -> { attempt, ... }` | Called every frame; returns the attempts graded this frame (usually none) |
-| `game:moves() -> { {id, name, notation, buttonless, other}, ... }` | Moves the current character can be graded on, for the target picker; `other` puts a move after the divider |
+| `game:moves() -> { {id, name, notation, buttonless, other}, ... }` | Moves the current character can be graded on, for the menu's target list; `other` puts a move after the divider |
 | `game:set_target(id or nil)` | Grade only one move |
 
 ### Attempt records
 
-The overlay, the bench and the CSV log only read these fields:
+The overlay and the CSV log only read these fields:
 
 | Field | Example | Notes |
 | --- | --- | --- |
 | `game`, `character` | `"sfiii3"`, `"ryu"` | |
-| `id` | `"ryu:29"` | Stable per move; used for bench targets |
+| `id` | `"ryu:29"` | Stable per move; used for targets |
 | `move`, `notation` | `"Hadoken"`, `"236+P"` | |
 | `ok` | `true` | The move came out |
 | `error` | `{ code = "skipped_step", text = "went from 2 to 6 without 3" }` | `nil` when `ok`; codes in [how-it-works.md](how-it-works.md#verdicts) |

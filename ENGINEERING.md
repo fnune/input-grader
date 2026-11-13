@@ -34,7 +34,7 @@ Reference: [Mark Seemann](https://blog.ploeh.dk/), [*Dependency Injection Princi
 
 ### Layers and abstraction ownership
 
-- `core/` is game-agnostic: input history, attempts, bench, overlay, CSV, hook multiplexer, app. It never requires a game or a platform module.
+- `core/` is game-agnostic: input history, card, pearls, menu, drawing, CSV, hook multiplexer, app. It never requires a game or a platform module.
 - `games/<game>/` implements the game module interface that `core/app.lua` consumes, and declares the source interface its grader consumes (`sources.lua`).
 - `platform/` implements the platform interface that `core/run.lua` and the game modules consume.
 - The interface belongs to the consumer. `docs/porting.md` is its specification.

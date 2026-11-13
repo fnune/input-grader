@@ -3,14 +3,18 @@ local draw = require("input_grader.core.draw")
 local COL = draw.COL
 local M = {}
 
-M.X0, M.Y0, M.WIDTH, M.VISIBLE, M.ROW_H = 44, 36, 296, 14, 11
+M.X0, M.Y0, M.WIDTH, M.VISIBLE, M.ROW_H = 44, 36, 296, 13, 11
 
 local function is_notation(s)
   return s:match("^[%d%[%]]+$") or s:match("^[%d%[%]]+%+[PK][PK]?$")
 end
 
---- Rows for `moves` (from the game module's :moves()): ALL MOVES, the main moves, a divider,
---- the other moves. Duplicates are merged; only real notation is kept, to be drawn as icons.
+M.HINT = "STICK MOVE  LP PICK  LK CLOSE"
+M.FOOTER = "PGUP/DN HISTORY   H HIDE"
+
+--- Rows for `moves` (from the game module's :moves()): the overlay's actions, then the targets:
+--- ALL MOVES, the main moves, and the other moves after a divider. Duplicates are merged; only
+--- real notation is kept, to be drawn as icons.
 function M.rows(moves)
   local seen, main, other = {}, {}, {}
   for _, m in ipairs(moves) do
@@ -21,12 +25,16 @@ function M.rows(moves)
       table.insert((m.buttonless or m.other) and other or main, row)
     end
   end
-  local rows = { { name = "ALL MOVES", notation = "" } }
+  local rows = {
+    { name = "HIDE OVERLAY", notation = "", action = "hide" },
+    { divider = true, name = "TARGET" },
+    { name = "ALL MOVES", notation = "" },
+  }
   for _, r in ipairs(main) do
     table.insert(rows, r)
   end
   if #other > 0 then
-    table.insert(rows, { divider = true })
+    table.insert(rows, { divider = true, name = "OTHER MOVES" })
     for _, r in ipairs(other) do
       table.insert(rows, r)
     end
@@ -45,8 +53,8 @@ function M.selectable(rows)
   return out
 end
 
---- Draws the picker with selectable row `selected` (1-based) highlighted.
-function M.draw(canvas, rows, selected, hint)
+--- Draws the menu with selectable row `selected` (1-based) highlighted.
+function M.draw(canvas, rows, selected)
   local selectable = M.selectable(rows)
   local target = selectable[math.max(1, math.min(selected, #selectable))]
   local sel_row = 1
@@ -58,17 +66,17 @@ function M.draw(canvas, rows, selected, hint)
   local first = math.max(1, math.min(sel_row - 6, #rows - M.VISIBLE + 1))
   local last = math.min(#rows, first + M.VISIBLE - 1)
   local x0, y0, width = M.X0, M.Y0, M.WIDTH
-  local height = 16 + (last - first + 1) * M.ROW_H
+  local height = 16 + (last - first + 1) * M.ROW_H + M.ROW_H
   draw.rbox(canvas, x0, y0, x0 + width, y0 + height, COL.panel, COL.edge)
-  canvas:text(x0 + 5, y0 + 4, "TARGET", COL.text)
-  hint = hint or "STICK MOVE  LP PICK  LK CLOSE"
-  canvas:text(x0 + width - 4 - draw.CHAR_W * #hint, y0 + 4, hint, COL.dim)
+  canvas:text(x0 + 5, y0 + 4, "MENU", COL.text)
+  canvas:text(x0 + width - 4 - draw.CHAR_W * #M.HINT, y0 + 4, M.HINT, COL.dim)
+  canvas:text(x0 + 5, y0 + height - 10, M.FOOTER, COL.dim)
   for i = first, last do
     local m = rows[i]
     local y = y0 + 16 + (i - first) * M.ROW_H
     if m.divider then
       canvas:line(x0 + 6, y + 3, x0 + width - 6, y + 3, COL.edge)
-      canvas:text(x0 + 8, y, "OTHER MOVES", COL.dim)
+      canvas:text(x0 + 8, y, m.name, COL.dim)
     else
       local is_sel = i == sel_row
       if is_sel then
@@ -77,11 +85,11 @@ function M.draw(canvas, rows, selected, hint)
       if m.notation ~= "" then
         draw.inline(canvas, x0 + 6, y, draw.notation_parts(m.notation), COL.text)
       end
-      canvas:text(x0 + 104, y, m.name:upper(), is_sel and COL.text or COL.dim)
+      canvas:text(m.action and x0 + 6 or x0 + 104, y, m.name:upper(), is_sel and COL.text or COL.dim)
     end
   end
   if last < #rows then
-    canvas:text(x0 + width / 2 - 4, y0 + height - 4, "...", COL.dim)
+    canvas:text(x0 + width / 2 - 4, y0 + height - 4 - M.ROW_H, "...", COL.dim)
   end
 end
 

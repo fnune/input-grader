@@ -4,7 +4,6 @@ local files = {
   "test_checker",
   "test_inputs",
   "test_grader",
-  "test_bench",
   "test_card",
   "test_launcher",
   "test_layout",

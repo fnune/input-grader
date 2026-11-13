@@ -80,7 +80,7 @@ return {
         require("input_grader.core.run").attach(platform, app)
         env.registered.after()
         env.registered.gui()
-        env.hotkeys[7]()
+        env.hotkeys[8]()
         env.registered.gui()
       end)
       for k, v in pairs(saved) do

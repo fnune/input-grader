@@ -124,9 +124,6 @@ function M.new(manager, emu)
   function p.on_draw(fn)
     table.insert(draw_fns, fn)
   end
-  function p.clock()
-    return machine.time.seconds
-  end
   function p.timestamp()
     return os.date("!%Y-%m-%dT%H:%M:%SZ")
   end

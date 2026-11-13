@@ -1,5 +1,4 @@
 local App = require("input_grader.core.app")
-local Bench = require("input_grader.core.bench")
 local csv = require("input_grader.core.csv")
 local Game = require("input_grader.games.sfiii3.game")
 local sources = require("input_grader.games.sfiii3.sources")
@@ -23,8 +22,6 @@ function M.build(platform, options)
   local source = sources.ram(platform.mem, commands, options.player or 1)
   return App.new({
     game = Game.new(source, commands),
-    bench = Bench.new(platform.clock),
-    clock = platform.clock,
     timestamp = platform.timestamp,
     log = options.log_path and platform.appender(options.log_path, csv.HEADER) or nil,
     avoid = { M.FIGHTCADE_INPUT_DISPLAY },

@@ -11,9 +11,8 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 - **A card per attempt** for every special move and super art, for all 20 characters. One column per input of the motion plus the button: what the move needs on top, what you did in that input's time below it, and a meter with frames used over frames allowed.
 - **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up. The input that broke the attempt is boxed in red.
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
-- **Recent attempts** as pearls under the card (red missed, green out, gold for clean and frame-perfect). Page Up and Page Down step back through them.
-- **Target any move**, including dashes, parries and other moves without a button, which are only graded while targeted. With a target, moving around between reps never counts as an attempt.
-- **Bench mode**: start a session, do reps, stop, and get success rates per move and per side, your most common mistake and your median margin.
+- **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
+- **Target any move**, including dashes, parries and other moves without a button, which are only graded while targeted. With a target, moving around between reps never counts as an attempt, and a running count shows your success rate since you picked it.
 - **Attempt log**: every graded attempt appended to `logs/attempts.csv` for comparing sessions.
 - **Runs inside Fightcade's training mode** as an add-on, next to its hitboxes and input display, with Fightcade's own icons.
 - **Reference tables**: [every character's motions and windows](docs/windows.md), generated from the ROM.
@@ -51,16 +50,15 @@ In a 3rd Strike match, open **Game > Lua Scripting > New Lua Script Window**, **
 
 ## Controls
 
-Plain keys, no setup in the emulator:
+Plain keys, no setup in the emulator. Only `M MENU` is shown on screen; the menu lists the rest.
 
 | Key | Action |
 | --- | --- |
-| M | Open or close the target picker. While it is open your character stands still: the stick moves through the list, LP picks, LK closes |
-| B | Start a bench session, or stop it and show the result |
+| M | Open or close the menu: hide the overlay, or pick a target move. While it is open your character stands still: the stick moves through the list, LP picks, LK closes |
 | H | Hide or show the overlay |
 | Page Up, Page Down | Step back and forward through recent attempts; a new attempt returns to the latest |
 
-If you map FBNeo's Lua Hotkeys 7, 8 and 9 (Input > Map game inputs), they do the same as B, M and H.
+If you map FBNeo's Lua Hotkeys 8 and 9 (Input > Map game inputs), they do the same as M and H.
 
 ## Reading the card
 
@@ -72,15 +70,14 @@ If you map FBNeo's Lua Hotkeys 7, 8 and 9 (Input > Map game inputs), they do the
 | Meters | Frames since the previous input over frames allowed: `2/10`. The bar is green up to half the window, orange past half, red past the end, with a notch where the window ended |
 | Box colour | Green: the move came out. Red: it did not. Grey: your input was right but the game refused the move (busy, or a fireball still on screen). Gold: frame-perfect |
 | Pearls | Recent attempts; the one shown is bigger and lifted |
-| Dimmed card | It no longer answers what you did: a button since then got no card, or the bench started after it |
+| Dimmed card | It no longer answers what you did: a button since then got no card |
+| Line above the card | With a target: successes over attempts and the rate since you picked it. A refused input counts as a success |
 
 The verdicts are explained in [how it works](docs/how-it-works.md#verdicts).
 
-## Bench mode
+## Attempt log
 
-Press B, do your reps, press B again. A panel shows, per move: successes out of attempts, the success rate overall and per facing, the most common mistake and the median margin. Pick a target with M first to bench a single move.
-
-Every graded attempt, bench or not, is appended to `logs/attempts.csv`: time, character, move, facing, result, mistake, per-step timings and margins.
+Every graded attempt is appended to `logs/attempts.csv`: time, character, move, facing, result, mistake, per-step timings and margins.
 
 ## Running with 3rd_training_lua
 
@@ -137,7 +134,7 @@ ROMs go in `roms/` (ignored by git) and are checked against `roms.sha1`. The rea
 | Path | Contents |
 | --- | --- |
 | `input_grader.lua` | The script to load in FBNeo |
-| `lua/input_grader/core/` | Game-agnostic: app, card, pearls, target picker, bench, drawing, CSV log, hook multiplexer |
+| `lua/input_grader/core/` | Game-agnostic: app, card, pearls, menu, drawing, CSV log, hook multiplexer |
 | `lua/input_grader/platform/` | FBNeo and MAME adapters |
 | `lua/input_grader/games/sfiii3/` | 3rd Strike: generated tables, RAM map, checker port, tracker, grader |
 | `harness/mame/` | Real-game validation and end-to-end checks |

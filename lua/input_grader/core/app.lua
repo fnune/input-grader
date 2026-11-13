@@ -175,7 +175,7 @@ function App:draw(canvas)
     menu.draw(canvas, menu.rows(self.game:moves()), self.pick)
     return
   end
-  canvas:text(App.LEGEND_X, App.LEGEND_Y, App.HELP, COL.dim)
+  canvas:text(App.LEGEND_X, App.LEGEND_Y, App.HELP, COL.text)
   local fit = layout.panel(self.card_y - 22, self.card_y + card.HEIGHT, self.avoid)
   if self.target then
     local y = self.card_y - card.NAME_H - 9

@@ -183,6 +183,15 @@ return {
     end,
   },
   {
+    "letting go of 6 and pressing 2 can share a frame, so the fastest Shoryuken takes 1 frame",
+    function()
+      local a = one({ { 5, 20 }, { 6, 2 }, { 2, 1 }, { 3, 1, "HP" }, { 5, 90 } })
+      T.eq(a.ok, true)
+      T.eq(a.minimum, 1)
+      T.eq(a.total, 1)
+    end,
+  },
+  {
     "the super's last 6 is optional: notation minus the steps the game checks",
     function()
       local opt = Game.optional_directions(T.fighter(2).slots[20])

@@ -499,6 +499,18 @@ function Game:grade(p)
   return self:grade_pick(p, pick)
 end
 
+-- Each step needs a frame of its own, except one that follows a release: letting go of 6 and
+-- pressing 2 can happen on the same frame.
+local function fastest(record)
+  local frames = 0
+  for k = 2, shown_steps(record) do
+    if record.steps[k - 1][1] ~= CK.LEVER_OFF then
+      frames = frames + 1
+    end
+  end
+  return frames
+end
+
 function Game:grade_pick(p, pick)
   local record, run = pick.record, pick.run
   local attempt = {
@@ -511,7 +523,7 @@ function Game:grade_pick(p, pick)
     side = p.facing_right and "right" or "left",
     ok = p.started ~= nil and p.started.slot == pick.slot,
     steps = {},
-    minimum = shown_steps(record) - 1,
+    minimum = fastest(record),
   }
   local margin
   for k = 1, shown_steps(record) do

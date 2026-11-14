@@ -46,6 +46,21 @@ end
 
 return {
   {
+    "FBNeo runs a start callback at once when the game is already running, so one added later runs at once too",
+    function()
+      local env = fake_fbneo()
+      env.emu.registerstart = function(fn)
+        fn()
+      end
+      hooks.install(env)
+      local started = 0
+      env.emu.registerstart(function()
+        started = started + 1
+      end)
+      T.eq(started, 1)
+    end,
+  },
+  {
     "two scripts' after-frame callbacks both run once hooks are installed",
     function()
       local env = fake_fbneo()

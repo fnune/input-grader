@@ -22,8 +22,11 @@ function M.install(env)
     if lib and lib[name] then
       local original = lib[name]
       local list = {}
-      installed.lists[pair[1] .. "." .. name] = list
+      local key = pair[1] .. "." .. name
+      local started = false
+      installed.lists[key] = list
       original(function(...)
+        started = true
         for _, fn in ipairs(list) do
           fn(...)
         end
@@ -31,6 +34,9 @@ function M.install(env)
       lib[name] = function(fn)
         if fn then
           table.insert(list, fn)
+          if started and key == "emu.registerstart" then
+            fn()
+          end
         end
       end
     end

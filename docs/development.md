@@ -58,6 +58,8 @@ Forgejo's push mirror carries the tag to [GitHub](https://github.com/fnune/input
 
 The Forgejo repository is the primary one; GitHub is a push mirror with issues enabled. GitHub Actions runs `nix run .#check` on every push the mirror makes. The real-game checks need ROMs, so they only run locally.
 
+The mirror pushes over a deploy key, and GitHub rejects changes to `.github/workflows/` pushed that way. After committing such a change, push it to GitHub once yourself (`git push git@github.com:fnune/input-grader.git <commit>:refs/heads/main`); the mirror carries on from there.
+
 ## README images
 
 The README's images come from Fightcade screenshots (3840x2160, game in the middle) and are rebuilt with:

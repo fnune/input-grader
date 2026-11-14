@@ -103,7 +103,24 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `followup_early` | The press after a dash came before the dash let you act; the game dropped it |
 | `throw_split`, `throw_whiff` | LP and LK did not land together, or the throw was out of range |
 | `mash_short`, `mash_mixed` | Fewer than five presses of one strength, or five split across strengths |
+| `cancel_late`, `cancel_early` | Motion and button were in time during an attack, but the press came after the attack's cancel window closed, or before the attack connected |
+| `cancel_whiff`, `cancel_none` | The attack being cancelled missed, or connected but has no frames that cancel into this kind of move |
 | `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |
+
+## Cancels
+
+A special or super pressed during a normal comes out only inside the normal's cancel window (`check_cg_cancel_data` in `PLS00.c`): the attack must have hit or been blocked (`meoshi_hit_flag`, player + 0x2FF), and its current animation frame must allow the move (`cg_cancel`, player + 0x221: `0x40` for super arts, `0x20` for specials). The check sees the state the previous frame ended with.
+
+`harness/mame/cancel.lua` measured Ryu's 2MK into SA I on Fightcade's 990512 set:
+
+| HP after MK | On hit or block | On whiff |
+| --- | --- | --- |
+| 5 to 6 frames | refused: before contact | refused |
+| 7 to 19 frames | super, cancelled | refused |
+| 20 to 29 frames | refused: the window closed | refused |
+| 30 frames or more | super, after the kick recovered | super, from 27 |
+
+At 7 frames the press itself is a frame early, and the game takes the button's release on the next frame. When the game refuses a move whose motion and button were in time during an attack, the grader reads this window from RAM and names the miss instead of reporting a refusal. The live cases in `harness/mame/grade.lua` cover a cancel in the window, 3 frames late, before a blocked kick connects, and after a whiff.
 
 ## Parries
 

@@ -9,7 +9,7 @@ The windows are the game's own: read from the command tables in the arcade ROM, 
 ## Features
 
 - **A card per attempt** for every special move and super art, for all 20 characters. One column per input of the motion plus the button: what the move needs on top, what you did in that input's time below it, and a meter with frames used over frames allowed.
-- **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up. The input that broke the attempt is boxed in red.
+- **Specific feedback** when it fails, in a few words and icons: a skipped diagonal (`NO ↘`), a direction too late and by how much (`↘ +3F LATE`), a button too early or too late, a motion cancelled by up, a cancel from a normal past its window (`HP +3F LATE CANCEL`) or from a normal that whiffed. The input that broke the attempt is boxed in red.
 - **Clean and frame-perfect**: an attempt where every input used at most half its window earns a gold sparkle and CLEAN; the fastest possible input turns the card gold.
 - **Recent attempts** as pearls under the card (red missed, green out, grey refused by the game, a gold plus for clean, all gold for frame-perfect). Page Up and Page Down step back through them.
 - **Target any move** you can practise alone: specials, super arts, dashes and the high jump. Dashes and the high jump are only graded while targeted.
@@ -103,6 +103,7 @@ From the game's own code, each pinned by a test:
 - Holding down before a Hadoken re-arms the motion every 11 frames, so the 10 frames for the next direction count from the last re-arm, not from letting go of down. A slow roll through down-back after a long crouch can fail by luck of timing.
 - Super motions do not check the last 6: 23623+P is enough.
 - Only an exact up cancels a motion. Up-forward does not.
+- A super from a normal needs the normal to hit or be blocked, and only works for a few frames after: from Ryu's 2MK, HP 7 to 19 frames after MK. Later, the game refuses the super until the kick has recovered.
 
 Details in [how it works](docs/how-it-works.md); every move's windows in [windows.md](docs/windows.md).
 

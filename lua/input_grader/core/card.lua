@@ -14,6 +14,8 @@ local SHORT = {
   missing_step = "INCOMPLETE",
   other_move = "OTHER MOVE",
   not_allowed = "GAME REFUSED",
+  cancel_whiff = "WHIFFED",
+  cancel_none = "NO CANCEL",
 }
 
 local function label_dir(label)
@@ -60,6 +62,10 @@ function M.reason(attempt)
       return { parts = { btn, " BEFORE ", icon }, step = k, button = true }
     end
     return { parts = { btn, " " .. n .. "F EARLY" }, button = true }
+  elseif code == "cancel_late" then
+    return { parts = { btn, " +" .. n .. "F LATE CANCEL" }, button = true }
+  elseif code == "cancel_early" then
+    return { parts = { btn, " " .. n .. "F EARLY CANCEL" }, button = true }
   elseif code == "cancelled" then
     return { parts = { { dir = 8 }, " CANCELLED" }, step = k }
   elseif code == "wrong_button" then

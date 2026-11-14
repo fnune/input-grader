@@ -230,6 +230,20 @@ function Game:rebuild(obs)
   self.pending = nil
 end
 
+local ATTACKING = 4
+
+function Game:attack_id(routine)
+  local was = self.attack_routine
+  self.attack_routine = routine
+  if not routine or routine[1] ~= ATTACKING then
+    return nil
+  end
+  if not (was and was[1] == ATTACKING and was[2] == routine[2]) then
+    self.attack_count = (self.attack_count or 0) + 1
+  end
+  return self.attack_count
+end
+
 --- Advance one emulator frame. Returns the attempts graded this frame (usually none).
 function Game:update()
   local obs = self.source:poll()
@@ -250,7 +264,15 @@ function Game:update()
   local pressed = band(buttons, bits.bnot16(self.prev_buttons))
   local released = band(self.prev_buttons, bits.bnot16(buttons))
   self.prev_buttons = buttons
-  self.history:push(frame, { lever = lever, pressed = pressed, released = released, held = buttons })
+  self.history:push(frame, {
+    lever = lever,
+    pressed = pressed,
+    released = released,
+    held = buttons,
+    attack = self:attack_id(obs.routine),
+    cancel = obs.cancel and obs.cancel.bits or 0,
+    contact = obs.cancel ~= nil and obs.cancel.contact,
+  })
 
   local dead = {}
   for slot, record in pairs(self.fighter.slots) do
@@ -434,6 +456,53 @@ local function plural(n, word)
   return n .. " " .. word .. (n == 1 and "" or "s")
 end
 
+local CANCEL_SUPER, CANCEL_SPECIAL = 0x40, 0x20
+
+local function is_super(slot)
+  return (slot >= C.SA_GROUND and slot < C.SP_GROUND) or (slot >= C.SA_AIR and slot < C.SP_AIR)
+end
+
+function Game:cancel_error(p, slot)
+  local before = self.history:at(p.frame - 1)
+  local attack = before and before.attack
+  if not attack then
+    return nil
+  end
+  local start = p.frame - 1
+  while self.history:at(start - 1) and self.history:at(start - 1).attack == attack do
+    start = start - 1
+  end
+  local bit = is_super(slot) and CANCEL_SUPER or CANCEL_SPECIAL
+  local first, last, contact
+  for _, h in ipairs(self.history:range(start, p.frame + self.options.settle)) do
+    if h.attack ~= attack then
+      break
+    end
+    contact = contact or h.contact
+    if h.contact and has(h.cancel, bit) then
+      local press_it_allows = h.frame + 1
+      first, last = first or press_it_allows, press_it_allows
+    end
+  end
+  local kind = is_super(slot) and "a super art" or "a special move"
+  if first and p.frame < first then
+    return {
+      code = "cancel_early",
+      text = "pressed " .. plural(first - p.frame, "frame") .. " before the attack could be cancelled",
+    }
+  elseif first and p.frame > last then
+    return {
+      code = "cancel_late",
+      text = "pressed " .. plural(p.frame - last, "frame") .. " after the attack's cancel window closed",
+    }
+  elseif first then
+    return nil
+  elseif contact then
+    return { code = "cancel_none", text = "this attack can't be cancelled into " .. kind }
+  end
+  return { code = "cancel_whiff", text = "the attack missed: only a hit or a block can be cancelled" }
+end
+
 function Game:diagnose(p, pick)
   local record, run = pick.record, pick.run
   local steps = record.steps
@@ -462,10 +531,11 @@ function Game:diagnose(p, pick)
         text = "button " .. plural(after - window, "frame") .. " too late (allowed " .. window .. " after the motion)",
       }
     end
-    return {
-      code = "not_allowed",
-      text = "motion and button were in time; the game refused the move (busy, meter or a fireball on screen)",
-    }
+    return self:cancel_error(p, pick.slot)
+      or {
+        code = "not_allowed",
+        text = "motion and button were in time; the game refused the move (busy, meter or a fireball on screen)",
+      }
   end
   local k = 1
   while run.steps[k] do

@@ -24,6 +24,28 @@ local function play(script, opts)
   return attempts
 end
 
+local function super_on_frame_25_during_attack_from_10_to_60(attack)
+  local source = sources.sim(T.commands(), RYU, 0)
+  local game = Game.new(source, T.commands())
+  local timeline =
+    inputs.timeline({ { 5, 20 }, { 2, 1 }, { 3, 1 }, { 6, 1 }, { 2, 1 }, { 3, 1, "HP" }, { 5, 50 } }, true)
+  local attempts = {}
+  for i, raw in ipairs(timeline) do
+    local state
+    if i >= 10 and i <= 60 then
+      local cancellable = attack.cancel_from and i >= attack.cancel_from and i <= attack.cancel_to
+      local in_contact = attack.contact_from ~= nil and i >= attack.contact_from
+      state = { routine = { 4, 0 }, cancel = { bits = cancellable and 0x60 or 0, contact = in_contact } }
+    end
+    source:push(raw, true, false, state)
+    for _, a in ipairs(game:update()) do
+      table.insert(attempts, a)
+    end
+  end
+  T.eq(#attempts, 1, "attempts")
+  return attempts[1]
+end
+
 local function one(script, opts)
   local attempts = play(script, opts)
   T.eq(#attempts, 1, "attempts")
@@ -31,6 +53,47 @@ local function one(script, opts)
 end
 
 return {
+  {
+    "a super pressed while the attack can be cancelled comes out",
+    function()
+      local a = super_on_frame_25_during_attack_from_10_to_60({ contact_from = 15, cancel_from = 15, cancel_to = 30 })
+      T.eq(a.move, "SA I Shinkuu Hadoken")
+      T.eq(a.ok, true)
+    end,
+  },
+  {
+    "the game checks a cancel against the frame before, so the window ends a frame after the last cancellable one",
+    function()
+      local a = super_on_frame_25_during_attack_from_10_to_60({ contact_from = 12, cancel_from = 12, cancel_to = 19 })
+      T.eq(a.ok, false)
+      T.eq(a.error.code, "cancel_late")
+      T.contains(a.error.text, "5 frames after the attack's cancel window closed")
+    end,
+  },
+  {
+    "a super pressed before the attack connected says how early",
+    function()
+      local a = super_on_frame_25_during_attack_from_10_to_60({ contact_from = 30, cancel_from = 30, cancel_to = 40 })
+      T.eq(a.ok, false)
+      T.eq(a.error.code, "cancel_early")
+      T.contains(a.error.text, "6 frames before")
+    end,
+  },
+  {
+    "an attack that missed cannot be cancelled",
+    function()
+      local a = super_on_frame_25_during_attack_from_10_to_60({})
+      T.eq(a.error.code, "cancel_whiff")
+    end,
+  },
+  {
+    "an attack that connected without cancel frames cannot be cancelled",
+    function()
+      local a = super_on_frame_25_during_attack_from_10_to_60({ contact_from = 12 })
+      T.eq(a.error.code, "cancel_none")
+      T.contains(a.error.text, "into a super art")
+    end,
+  },
   {
     "a clean Hadoken is graded as out, with per-step gaps",
     function()

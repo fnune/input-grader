@@ -85,6 +85,7 @@ function RamSource:poll()
     contact = contact,
     routine = { r1, r2 },
     cg_type = self.mem.u8(base + ram.CG_TYPE),
+    cancel = { bits = self.mem.u8(base + ram.CG_CANCEL), contact = self.mem.u8(base + ram.MEOSHI_HIT_FLAG) ~= 0 },
     raw = raw,
     facing_right = ctx.facing_right,
     airborne = ctx.airborne,
@@ -113,8 +114,13 @@ end
 
 SimSource.BUSY_FRAMES = 30
 
-function SimSource:push(raw, facing_right, airborne)
-  table.insert(self.queue, { raw = raw, facing_right = facing_right ~= false, airborne = airborne or false })
+--- `attack`, when given, stands in for a normal the player is in: { routine, cancel = { bits, contact } }.
+--- No move starts during it unless the cancel allows one.
+function SimSource:push(raw, facing_right, airborne, attack)
+  table.insert(
+    self.queue,
+    { raw = raw, facing_right = facing_right ~= false, airborne = airborne or false, attack = attack }
+  )
 end
 
 function SimSource:poll()
@@ -126,9 +132,12 @@ function SimSource:poll()
   checker:frame(input.raw, input)
   local art = self.fighter.super_arts[self.super_art + 1]
   local started
+  local attack, was = input.attack, self.attack
+  self.attack = attack
+  local cancellable = not attack or (was and was.cancel.contact and was.cancel.bits ~= 0)
   if self.busy > 0 then
     self.busy = self.busy - 1
-  else
+  elseif cancellable then
     started = checker:start({ airborne = input.airborne, super_art = art })
     if started then
       self.busy = SimSource.BUSY_FRAMES
@@ -147,6 +156,8 @@ function SimSource:poll()
     raw = input.raw,
     facing_right = input.facing_right,
     airborne = input.airborne,
+    routine = attack and attack.routine,
+    cancel = attack and attack.cancel,
     sw_new = checker.lvr.sw_new,
     state = state,
     started = started,

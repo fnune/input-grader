@@ -24,6 +24,7 @@ Input grader works with 3rd Strike in Fightcade 2's training mode, and nothing e
 2. Copy the `fbneo-training-mode` folder from the zip into this folder. If asked, choose to replace the files.
     - On Windows: `Documents\Fightcade\emulator\fbneo`
     - On Linux with the Flatpak: `~/.var/app/com.fightcade.Fightcade/data`
+    - If you use [effie3rd's training mode](https://github.com/effie3rd/3rd_training_lua), copy `effie3rd-compatible/fbneo-training-mode` instead. With the Flatpak, then make its `fbneo-training-mode.lua` read-only, or Fightcade puts its own back on every start.
 3. Start 3rd Strike with Fightcade's training mode, and press M in a match.
 
 To update, do the same with a newer zip. The grader lives in `fbneo-training-mode\games\sfiii3\addon`: if you already have that folder, back it up first; to uninstall, delete it or put your backup back. Developers can also [run it from a clone](docs/development.md#other-setups).

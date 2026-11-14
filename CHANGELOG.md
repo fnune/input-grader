@@ -2,6 +2,10 @@
 
 Changes that matter to players, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+- Works with [effie3rd's training mode](https://github.com/effie3rd/3rd_training_lua), from the zip's `effie3rd-compatible` folder, until it loads add-ons itself ([#20](https://github.com/effie3rd/3rd_training_lua/issues/20)).
+
 ## 0.1.1
 
 - Shorter install notes, with Fightcade's usual folder and how to uninstall.

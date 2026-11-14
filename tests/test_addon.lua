@@ -22,6 +22,33 @@ end
 io.write("hooks ", #registers.registerbefore, " ", #registers.registerafter, " ", #registers.guiregister, "\n")
 ]]
 
+local EFFIE_DRIVER = [[
+local function noop() end
+local hooks = {}
+local function slot(name) return function(fn) hooks[name] = fn end end
+local function start_now(fn) hooks.start = fn; fn() end
+emu = { registerbefore = slot("before"), registerafter = slot("after"), registerstart = start_now,
+  registerexit = slot("exit"), romname = function() return "sfiii3nr1" end, framecount = function() return 0 end }
+gui = { register = slot("gui"), text = noop, box = noop }
+savestate = { registerload = slot("load"), registersave = slot("save") }
+input = { registerhotkey = noop }
+local function zero() return 0 end
+memory = { readbyte = zero, readword = zero, readwordsigned = zero, readdword = zero }
+dofile("fbneo-training-mode.lua")
+for _, name in ipairs({ "before", "after", "gui" }) do
+  if hooks[name] then hooks[name]() end
+end
+local lists = __input_grader_hooks.lists
+io.write("effie ", tostring(effie_ran), " before ", #lists["emu.registerbefore"],
+  " after ", #lists["emu.registerafter"], " gui ", #lists["gui.register"], "\n")
+]]
+
+local FAKE_EFFIE = [[
+emu.registerstart(function() effie_started = true end)
+emu.registerbefore(function() effie_ran = effie_started end)
+gui.register(function() end)
+]]
+
 local function interpreter()
   local i = -1
   while arg and arg[i - 1] do
@@ -45,7 +72,36 @@ local function exists(path)
   return f ~= nil
 end
 
+local function write(path, text)
+  local f = assert(io.open(path, "w"))
+  f:write(text)
+  f:close()
+end
+
 return {
+  {
+    "with effie3rd's training mode, the add-on runs first and multiplexes the hooks, so both scripts' callbacks run",
+    function()
+      local dest = os.tmpname()
+      os.remove(dest)
+      run(
+        "tools/build-addon.sh "
+          .. dest
+          .. " && cp tools/effie3rd_entry.lua "
+          .. dest
+          .. "/fbneo-training-mode/fbneo-training-mode.lua"
+      )
+      local training = dest .. "/fbneo-training-mode"
+      run("mkdir -p " .. training .. "/src/data")
+      write(training .. "/src/data/game_data.lua", "return {}\n")
+      write(training .. "/3rd_training.lua", FAKE_EFFIE)
+      write(training .. "/driver.lua", EFFIE_DRIVER)
+      local out = run("cd " .. training .. " && " .. interpreter() .. " driver.lua")
+      run("rm -rf " .. dest)
+      T.contains(out, "loaded")
+      T.contains(out, "effie true before 2 after 1 gui 2")
+    end,
+  },
   {
     "the add-on runs from the training mode's folder with relative paths, hooks in, and logs next to itself",
     function()

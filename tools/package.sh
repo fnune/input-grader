@@ -10,6 +10,8 @@ zip_path="${repo}/build/${name}.zip"
 rm -rf "${stage}" "${zip_path}"
 mkdir -p "${stage}"
 "${repo}/tools/build-addon.sh" "${stage}"
+"${repo}/tools/build-addon.sh" "${stage}/effie3rd-compatible"
+cp "${repo}/tools/effie3rd_entry.lua" "${stage}/effie3rd-compatible/fbneo-training-mode/fbneo-training-mode.lua"
 cp "${repo}/LICENSE" "${stage}/LICENSE.txt"
 cat > "${stage}/README.txt" <<TXT
 Input grader ${version}, for Street Fighter III: 3rd Strike in Fightcade 2's training mode.
@@ -19,6 +21,9 @@ and if asked, choose to replace the files:
 
   On Windows: Documents\\Fightcade\\emulator\\fbneo
   On Linux with the Flatpak: ~/.var/app/com.fightcade.Fightcade/data
+
+If you use effie3rd's training mode, copy effie3rd-compatible/fbneo-training-mode
+instead.
 
 Then start 3rd Strike with Fightcade's training mode, and press M in a match.
 

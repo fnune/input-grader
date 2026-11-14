@@ -54,6 +54,12 @@ To release:
 
 Forgejo's push mirror carries the tag to [GitHub](https://github.com/fnune/input-grader), where the Release workflow checks again, builds `input-grader-X.Y.Z.zip` with `nix run .#package`, and publishes it as a GitHub release with that changelog section as its notes. `nix run .#package` also builds the zip locally, in `build/`.
 
+With `FORGEJO_TOKEN` set, the script then waits for the GitHub release, downloads its zip, and creates the same release on Forgejo with the same notes and zip. GitHub Actions cannot reach Forgejo, which only answers on the VPN. To use the token from the keyring:
+
+```sh
+FORGEJO_TOKEN=$(secret-tool lookup service doriath username home-nix/forgejo-fnune) nix run .#release
+```
+
 ## CI
 
 The Forgejo repository is the primary one; GitHub is a push mirror with issues enabled. GitHub Actions runs `nix run .#check` on every push the mirror makes. The real-game checks need ROMs, so they only run locally.

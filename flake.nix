@@ -108,7 +108,7 @@
 
           release = app (pkgs.writeShellApplication {
             name = "release";
-            runtimeInputs = [ pkgs.git ];
+            runtimeInputs = [ pkgs.git pkgs.gh pkgs.curl pkgs.python3 ];
             text = "tools/release.sh";
           });
 

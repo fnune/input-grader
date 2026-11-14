@@ -72,4 +72,8 @@ The [arcade decompilation](https://github.com/gibletto/sfIII3-cps3-decomp) is wh
 
 ## Development
 
-Building, testing and the code layout are in [development.md](docs/development.md), conventions in [ENGINEERING.md](ENGINEERING.md), and plans in [roadmap.md](docs/roadmap.md). The licence is not chosen yet. ROMs are not included.
+Building, testing and the code layout are in [development.md](docs/development.md), conventions in [ENGINEERING.md](ENGINEERING.md), and plans in [roadmap.md](docs/roadmap.md). ROMs are not included.
+
+## Licence
+
+[AGPL-3.0](LICENSE). The command tables and the checker derive from the AGPL-3.0 [arcade decompilation](https://github.com/gibletto/sfIII3-cps3-decomp).

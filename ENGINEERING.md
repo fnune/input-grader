@@ -92,6 +92,8 @@ Reference: [Mark Seemann](https://blog.ploeh.dk/), [*Dependency Injection Princi
 
 LLMs may write code here, held to the same standards as any other code: tests at the unit and real-game levels, ground-truth data, and review of every change.
 
+Before committing, an agent runs the `stripping-code-comments` skill over its diff: delete every comment it added, make the code clear without them, move the reasons worth keeping into tests named after them, and report the rest for a person to decide.
+
 ## Not adopted from the original
 
 TypeScript, pnpm, Biome, Renovate and the package budgets do not apply to Lua emulator scripts. The service baselines (observability, authentication, health-data privacy) do not apply to an offline training tool. CI is not set up yet: the real-game checks need ROMs, which cannot be distributed.

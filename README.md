@@ -32,6 +32,8 @@ Do a special move or a super art, and a card appears for it. To drill one move, 
 | H | Hide or show the overlay |
 | Page Up, Page Down | Step through your recent attempts |
 
+<img src="docs/images/menu.jpg" width="60%" alt="The target menu for Ken: his super arts and specials with their motions, then dashes, the high jump and the press after a dash">
+
 Dashes, the high jump, the press after a dash and parries are graded only while you target them. If you map FBNeo's Lua Hotkeys 8 and 9, they do the same as M and H.
 
 ## Reading the card

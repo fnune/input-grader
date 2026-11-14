@@ -15,6 +15,7 @@ from card_explained import CLEAN, MISS, Figure
 GAME_SCREEN = (480, 0, 3360, 2160)
 
 HERO = ("Screenshot_20261114_164926.png", GAME_SCREEN, (1440, 1080), "clean-super.jpg", 88)
+MENU = ("Screenshot_20261114_175514.png", (800, 340, 3045, 2000), (898, 664), "menu.jpg", 90)
 EXPLAINED = [(CLEAN, "card-explained.jpg"), (MISS, "miss-explained.jpg")]
 
 
@@ -25,7 +26,7 @@ def crop(source, box, size, output, quality):
 
 if __name__ == "__main__":
     screenshots, images = sys.argv[1], "docs/images"
-    for name, box, size, output, quality in [HERO]:
+    for name, box, size, output, quality in [HERO, MENU]:
         crop(os.path.join(screenshots, name), box, size, os.path.join(images, output), quality)
     for spec, output in EXPLAINED:
         figure = Figure(spec, os.path.join(screenshots, spec.screenshot))

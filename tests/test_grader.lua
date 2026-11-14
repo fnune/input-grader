@@ -142,6 +142,19 @@ return {
     end,
   },
   {
+    "a refused second Hadoken is a Hadoken, not a super whose 2 came 30 frames after the first 6",
+    function()
+      local two =
+        { { 5, 2 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 30 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 30 } }
+      local attempts = graded_with_game_state(two, function(i)
+        return i > 20 and { refuse = true, super_art_ok = 1, projectiles = { [29] = true } } or nil
+      end)
+      T.eq(#attempts, 2, "attempts")
+      T.eq(attempts[2].move, "Hadoken")
+      T.eq(attempts[2].error.code, "projectile_alive")
+    end,
+  },
+  {
     "a clean Hadoken is graded as out, with per-step gaps",
     function()
       local a = one({ { 5, 2 }, { 2, 2 }, { 3, 3 }, { 6, 1, "LP" } })

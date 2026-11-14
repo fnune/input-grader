@@ -373,6 +373,10 @@ local function evidence(self, record, run, last_frame)
         end
       end
     end
+    local window = TIMED[step[1]] and step[2] > 0 and step[2] or nil
+    if found and window and found - cursor > window + self.options.late_grace then
+      found = nil
+    end
     if found then
       n, cursor, last = n + 1, found, found
     elseif not skipped then

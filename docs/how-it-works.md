@@ -77,6 +77,7 @@ A button press is graded only when it looks like an attempt at a special move, s
 
 - **The game started it.** Always graded, as out.
 - **Most of its motion is there, in order.** At least half its directions and at least 2: the steps the game accepted, then the remaining directions as they followed, allowing one to be missing (a skipped diagonal).
+- **Its directions came in time.** A direction later than its window by more than the 8-frame grace is not part of the same motion, so two Hadokens in a row are not a super with a 30-frame gap.
 - **The motion ended close to the button.** A finished motion may be followed by a late button, up to 8 frames past the button window, which is graded as late. An unfinished motion counts only if its last direction came within 3 frames of the button, so a crouch held for a while before a cr.HP is not a missed Shoryuken.
 - **It's on the right ground.** Ground moves only on the ground, air moves only in the air.
 

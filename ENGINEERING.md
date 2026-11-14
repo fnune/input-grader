@@ -105,4 +105,4 @@ Before committing, an agent runs the `stripping-code-comments` skill over its di
 
 ## Not adopted from the original
 
-TypeScript, pnpm, Biome, Renovate and the package budgets do not apply to Lua emulator scripts. The service baselines (observability, authentication, health-data privacy) do not apply to an offline training tool. CI is not set up yet: the real-game checks need ROMs, which cannot be distributed.
+TypeScript, pnpm, Biome, Renovate and the package budgets do not apply to Lua emulator scripts. The service baselines (observability, authentication, health-data privacy) do not apply to an offline training tool. CI on GitHub runs `nix run .#check` only: the real-game checks need ROMs, which cannot be distributed.

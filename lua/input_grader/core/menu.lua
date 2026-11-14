@@ -1,4 +1,5 @@
 local draw = require("input_grader.core.draw")
+local version = require("input_grader.version")
 
 local COL = draw.COL
 local M = {}
@@ -66,6 +67,8 @@ function M.draw(canvas, rows, selected)
   canvas:text(x0 + 5, y0 + 4, "TARGET", COL.text)
   draw.inline(canvas, x0 + width - 4 - draw.parts_width(M.HINT), y0 + 4, M.HINT, COL.dim)
   canvas:text(x0 + 5, y0 + height - 10, M.FOOTER, COL.dim)
+  local tag = "V" .. version
+  canvas:text(x0 + width - 4 - #tag * draw.CHAR_W, y0 + height - 10, tag, COL.dim)
   for i = first, last do
     local m = rows[i]
     local y = y0 + 16 + (i - first) * M.ROW_H

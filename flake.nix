@@ -100,6 +100,18 @@
           grade = app (mameRun pkgs "grade" "harness/mame/grade.lua");
           mash = app (mameRun pkgs "mash" "harness/mame/mash.lua");
 
+          package = app (pkgs.writeShellApplication {
+            name = "package";
+            runtimeInputs = [ pkgs.zip ];
+            text = "tools/package.sh";
+          });
+
+          release = app (pkgs.writeShellApplication {
+            name = "release";
+            runtimeInputs = [ pkgs.git ];
+            text = "tools/release.sh";
+          });
+
           readme-images = app (pkgs.writeShellApplication {
             name = "readme-images";
             runtimeInputs = [ (pkgs.python3.withPackages (ps: [ ps.pillow ])) ];

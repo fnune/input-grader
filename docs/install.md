@@ -1,17 +1,20 @@
 # Other setups
 
-The [README](../README.md#install) covers the usual install: the add-on script, on Linux with Fightcade's Flatpak or on Windows with Git Bash. On Linux the script also lets the Flatpak read this repository and write its `logs/` folder.
+The [README](../README.md#install) covers the usual install: the release zip, merged into Fightcade's training mode. The zip holds the training mode's add-on folder `games/sfiii3/addon/`: its `addons.lua`, the add-on `input_grader.lua`, and the grader's code and attempt log in `input_grader/`. The zip's `addons.lua` replaces any other 3rd Strike add-on list you had there.
 
-## Windows without Git Bash
+## From this repository
 
-Create the folder `fbneo-training-mode\games\sfiii3\addon\` next to Fightcade's emulator, and put two files in it:
+To install the add-on from a clone instead of a release, run:
 
-- `addons.lua`, containing `addons_run = { "input_grader.lua" }`
-- a copy of `tools\fightcade_addon.lua.in` named `input_grader.lua`, with `@GRADER@` replaced by the path of this repository, ending in a backslash
+```sh
+tools/install-fightcade-addon.sh [fbneo-folder]
+```
+
+It copies the same files the zip holds. Without an argument it installs into the Linux Flatpak's `~/.var/app/com.fightcade.Fightcade/data`; on Windows, run it in Git Bash with your `Fightcade/emulator/fbneo` folder.
 
 ## Without the training mode
 
-In a 3rd Strike match, open **Game > Lua Scripting > New Lua Script Window**, browse to `input_grader.lua` in this repository, and run it. Loading a script this way stops any other script, including the training mode.
+In a 3rd Strike match, open **Game > Lua Scripting > New Lua Script Window**, browse to `input_grader.lua` in this repository, and run it. Loading a script this way stops any other script, including the training mode. The attempt log goes to the repository's `logs/` folder.
 
 ## With 3rd_training_lua
 

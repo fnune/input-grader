@@ -40,11 +40,23 @@ The overlay's drawing, icons, keys and menu were checked inside Fightcade 2.4.2 
 
 ## Attempt log
 
-`logs/attempts.csv` gets one row per graded attempt: time, character, move, facing, result, mistake, per-step timings and margins.
+`attempts.csv` gets one row per graded attempt: time, character, move, facing, result, mistake, per-step timings and margins. The add-on writes it next to itself in the training mode; the other setups write `logs/attempts.csv` in this repository.
 
-## Licence
+## Releases
 
-Not chosen yet. The generated tables and the checker port derive from the arcade decomp, which is AGPL-3.0, so a public release would most simply be AGPL-3.0 too.
+Versions follow [semantic versioning](https://semver.org/), and the version lives in `lua/input_grader/version.lua`. The menu shows it, and a test checks it matches the newest section of `CHANGELOG.md`.
+
+To release:
+
+1. In one commit, set the new version in `lua/input_grader/version.lua` and add its section at the top of `CHANGELOG.md`, in plain words for players.
+2. Push that commit to `main` on Forgejo.
+3. Run `nix run .#release`. It checks that the tree is clean, the changelog has the section, the tag is new, `main` on Forgejo is this commit and `nix run .#check` passes. Then it tags `vX.Y.Z` and pushes the tag.
+
+Forgejo's push mirror carries the tag to [GitHub](https://github.com/fnune/input-grader), where the Release workflow checks again, builds `input-grader-X.Y.Z.zip` with `nix run .#package`, and publishes it as a GitHub release with that changelog section as its notes. `nix run .#package` also builds the zip locally, in `build/`.
+
+## CI
+
+The Forgejo repository is the primary one; GitHub is a push mirror with issues enabled. GitHub Actions runs `nix run .#check` on every push the mirror makes. The real-game checks need ROMs, so they only run locally.
 
 ## README images
 

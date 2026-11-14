@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix run .#check
+      - name: Check the tag matches the version
+        run: |
+          version=$(sed -n 's/^return "\(.*\)"$/\1/p' lua/input_grader/version.lua)
+          test "v${version}" = "${GITHUB_REF_NAME}"
+      - run: nix run .#package
+      - run: tools/release-notes.sh "${GITHUB_REF_NAME#v}" > notes.md
+      - run: gh release create "${GITHUB_REF_NAME}" "build/input-grader-${GITHUB_REF_NAME#v}.zip" --title "Input grader ${GITHUB_REF_NAME#v}" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

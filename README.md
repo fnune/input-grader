@@ -12,21 +12,15 @@ The windows come from the game's own code, read from the arcade ROM.
 
 ## Install
 
-You need Fightcade 2 with 3rd Strike, and a copy of this repository.
+Input grader works with Street Fighter III: 3rd Strike on Fightcade 2, in Fightcade's training mode. It does not support other games or emulators yet.
 
-On Linux with Fightcade's Flatpak, start Fightcade once, then run:
+1. Download `input-grader-<version>.zip` from the [latest release](https://github.com/fnune/input-grader/releases/latest).
+2. Open the zip, and drag the `fbneo-training-mode` folder in it onto the `emulator\fbneo` folder inside your Fightcade folder. When Windows asks, choose to merge the folders and replace the files.
+3. Start 3rd Strike in Fightcade with its training mode, as usual. In a match, press M to open the grader's menu.
 
-```sh
-tools/install-fightcade-addon.sh
-```
+To update, download the newer zip and do the same.
 
-On Windows, run the same script in Git Bash with the path to your training mode folder:
-
-```sh
-tools/install-fightcade-addon.sh "/c/path/to/Fightcade/emulator/fbneo/fbneo-training-mode"
-```
-
-Then start 3rd Strike with Fightcade's training mode as usual, and the grader loads with it. [Other setups](docs/install.md) covers Windows without Git Bash, running without the training mode, and running with 3rd_training_lua.
+On Linux with Fightcade's Flatpak, extract the zip into `~/.var/app/com.fightcade.Fightcade/data` instead. [Other setups](docs/install.md) covers running without the training mode, and with 3rd_training_lua.
 
 ## Use
 
@@ -54,8 +48,6 @@ When a move fails, the card names the mistake, boxes the input that caused it, a
 
 Other mistakes it names include a skipped diagonal, a direction too slow, a button too early, a motion cancelled by up, and a cancel from a normal that came too late or whiffed.
 
-Every attempt is also written to `logs/attempts.csv`, so you can compare sessions.
-
 ## Surprises in the game's input rules
 
 The grader follows the game's own rules, and a few of them are not what most players expect. A super motion does not need its last 6, so 23623+P is enough. Only a straight up cancels a motion, and up-forward does not. The Shoryuken's 6 can be held as long as you like.
@@ -72,7 +64,7 @@ The [arcade decompilation](https://github.com/gibletto/sfIII3-cps3-decomp) is wh
 
 ## Development
 
-Building, testing and the code layout are in [development.md](docs/development.md), conventions in [ENGINEERING.md](ENGINEERING.md), and plans in [roadmap.md](docs/roadmap.md). ROMs are not included.
+Building, testing, releasing and the code layout are in [development.md](docs/development.md), conventions in [ENGINEERING.md](ENGINEERING.md), plans in [roadmap.md](docs/roadmap.md), and what changed in each version in [CHANGELOG.md](CHANGELOG.md). ROMs are not included.
 
 ## Licence
 

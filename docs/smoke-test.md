@@ -2,7 +2,7 @@
 
 A 10-minute check that the riskiest parts of the overlay work inside Fightcade's FBNeo, before the full UI is built on them. `smoke_test.lua` checks each part on its own, shows a checklist on screen, and writes the results to `logs/smoke-test.txt`.
 
-## What it checks
+## Checks
 
 | Check | What it proves |
 | --- | --- |

@@ -43,7 +43,7 @@
             pkgs.lua5_4
             pkgs.lua54Packages.luacheck
             pkgs.stylua
-            pkgs.python3
+            (pkgs.python3.withPackages (ps: [ ps.pillow ]))
             pkgs.mame
             pkgs.gcc_multi
           ];
@@ -99,6 +99,12 @@
           validate = app (mameRun pkgs "validate" "harness/mame/validate.lua");
           grade = app (mameRun pkgs "grade" "harness/mame/grade.lua");
           mash = app (mameRun pkgs "mash" "harness/mame/mash.lua");
+
+          readme-images = app (pkgs.writeShellApplication {
+            name = "readme-images";
+            runtimeInputs = [ (pkgs.python3.withPackages (ps: [ ps.pillow ])) ];
+            text = ''python3 design/readme_images.py "$1"'';
+          });
         });
 
       formatter = forAll (pkgs: pkgs.nixpkgs-fmt);

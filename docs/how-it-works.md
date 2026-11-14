@@ -1,4 +1,4 @@
-# How it works
+# Internals
 
 The grader reads 3rd Strike's own command-input state from emulator memory every frame and explains each attempt in the game's terms: which step matched when, how many frames each window allowed, and what went wrong. This page covers where the data comes from, how it was verified, and what the game actually does.
 
@@ -13,7 +13,7 @@ The grader reads 3rd Strike's own command-input state from emulator memory every
 
 Directions are relative to the facing the command check uses (`rl_waza`), which can differ from the sprite's facing for a few frames around a cross-up.
 
-## Where the data comes from
+## Data sources
 
 | Data | Source | How it is checked |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ Each slot's `w_ptr` points at the next step of its ROM record. Rather than look 
 
 The training script's Chun-Li kick counters (`0x02025A03`) and Alex charge counters (`0x02025A49`) land exactly on slot 29's `flag` and slot 32's `free1` in this layout, which is independent confirmation of the `WAZA_WORK` address.
 
-## How it was verified
+## Verification
 
 ### The Lua checker against the game
 
@@ -161,7 +161,7 @@ The follow-up targets grade the first press after the dash against that first fr
 
 Chun-Li's Hyakuretsukyaku (slot 29) is the only move whose command is a mash step (`CK_RENDA`): five presses of the same strength while the step's count runs (98 frames, restarted when it runs out). Each strength has its own counter, so LK, LK, LK, MK, MK is not five. Slots 8 to 11 ("punch mashing", "kick mashing") are different: animation scripts read them (`comm_rapp` and friends in `CHARMOVE.c`) to keep a move going while the player keeps mashing, so they are not targets. `harness/mame/mash.lua` checks five LK, mixed strengths and four LK live.
 
-## What the game does that players may not expect
+## Surprises in the game's input rules
 
 Each of these is pinned by a test in `tests/test_checker.lua` or `harness/mame/grade.lua`.
 

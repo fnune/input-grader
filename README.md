@@ -2,7 +2,7 @@
 
 Frame-accurate feedback on special move inputs for Street Fighter III: 3rd Strike, as an overlay for [Fightcade](https://www.fightcade.com/)'s FBNeo. After every attempt it shows what the move needed next to what you did, how many frames each part took against the window the game allows, and what went wrong when the move did not come out.
 
-![The overlay after a clean Shoryuken: a green card with the sparkle, one column per input, frames used over frames allowed, and recent attempts as pearls underneath](docs/images/overlay.png)
+![The overlay in Fightcade after a clean 2MK xx Shinkuu Hadoken: the card's name line reads CLEAN 16F (MIN 4F), each input of 236236+P has a green meter of frames used over frames allowed, a gold sparkle marks the clean attempt, and recent attempts sit underneath as pearls](docs/images/clean-super.jpg)
 
 The windows are the game's own: read from the command tables in the arcade ROM, and checked against the running game frame by frame (over 165,000 frames across every character and both Japanese ROM revisions, without a mismatch).
 
@@ -113,7 +113,6 @@ Details in [how it works](docs/how-it-works.md); every move's windows in [window
 - Validated in the real game on both the Japan 990608 set and Fightcade's 990512 set.
 - Charge, 360 and mash moves are graded, with less specific feedback than motions.
 - The end-to-end verdict checks use Ryu; other characters' command checks are validated frame by frame, but their verdicts have only been spot-checked.
-- The screenshot comes from the MAME test bench, which has no icon sheet and draws its arrows with lines; in Fightcade the overlay uses Fightcade's own icons.
 - The overlay's drawing, icons, keys and menu were checked inside Fightcade 2.4.2 (Flatpak, Linux) with a smoke test (`smoke_test.lua`, [steps](docs/smoke-test.md)); a full session as a training-mode add-on is next.
 
 ## Development

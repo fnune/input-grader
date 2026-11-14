@@ -15,6 +15,14 @@ GRADE_SNAPSHOTS=1 nix run .#grade   # the same, saving screenshots to build/snap
 
 Conventions are in [ENGINEERING.md](../ENGINEERING.md), and agent instructions in [AGENTS.md](../AGENTS.md). Adding another game or emulator is described in [porting.md](porting.md), and how the grader reads the game in [the internals](how-it-works.md).
 
+## Other setups
+
+All three run the grader from a clone of this repository.
+
+- `tools/install-fightcade-addon.sh [fbneo-folder]` copies the add-on into Fightcade's training mode, the same files the release zip holds. It defaults to the Linux Flatpak's data folder; on Windows, run it in Git Bash with your `Fightcade/emulator/fbneo` folder.
+- Without the training mode, load `input_grader.lua` from **Game > Lua Scripting > New Lua Script Window** in a 3rd Strike match. This stops any other script, the training mode included, and logs to `logs/attempts.csv`.
+- With [3rd_training_lua](https://github.com/Grouflon/3rd_training_lua), `tools/install-training-launcher.sh /path/to/3rd_training_lua` writes `3rd_training_with_grader.lua`, which runs both scripts; load it instead of `3rd_training.lua`. FBNeo keeps one callback per hook, so the launcher installs the grader's hook multiplexer first. Add `--windows-path` when Fightcade runs under Wine and the folder is on another Wine drive.
+
 ## ROMs
 
 ROMs go in `roms/`, which git ignores, and are checked against `roms.sha1`. The real-game checks need `sfiii3.zip` and `sfiii3n.zip` (MAME set names). Set `ROMSET=sfiii3nr1` to run them on Fightcade's revision instead. ROMs are not included and never will be.

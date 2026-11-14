@@ -12,16 +12,19 @@ mkdir -p "${stage}"
 "${repo}/tools/build-addon.sh" "${stage}"
 cp "${repo}/LICENSE" "${stage}/LICENSE.txt"
 cat > "${stage}/README.txt" <<TXT
-Input grader ${version}, for Street Fighter III: 3rd Strike on Fightcade.
+Input grader ${version}, for Street Fighter III: 3rd Strike in Fightcade 2's training mode.
 
-To install, drag the fbneo-training-mode folder from this zip onto Fightcade's
-emulator\\fbneo folder, and say yes when asked to merge the folders. Then start
-3rd Strike with Fightcade's training mode. Press M in a match for the menu.
+To install, copy the fbneo-training-mode folder from this zip into this folder,
+and if asked, choose to replace the files:
 
-On Linux with Fightcade's Flatpak, extract the zip into
-~/.var/app/com.fightcade.Fightcade/data instead.
+  On Windows: Documents\\Fightcade\\emulator\\fbneo
+  On Linux with the Flatpak: ~/.var/app/com.fightcade.Fightcade/data
 
-To update, do the same with a newer zip.
+Then start 3rd Strike with Fightcade's training mode, and press M in a match.
+
+To update, do the same with a newer zip. The grader lives in
+fbneo-training-mode\\games\\sfiii3\\addon: if you already have that folder, back it up
+first; to uninstall, delete it or put your backup back.
 
 More, and the source code: https://github.com/fnune/input-grader
 TXT

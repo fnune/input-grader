@@ -105,7 +105,10 @@ With a target move set (Alt+8), only that move is considered, and any of its mot
 | `mash_short`, `mash_mixed` | Fewer than five presses of one strength, or five split across strengths |
 | `cancel_late`, `cancel_early` | Motion and button were in time during an attack, but the press came after the attack's cancel window closed, or before the attack connected |
 | `cancel_whiff`, `cancel_none` | The attack being cancelled missed, or connected but has no frames that cancel into this kind of move |
-| `not_allowed` | Motion and button were in time, but the game did not start the move: busy in another move, no meter, or a fireball on screen |
+| `no_meter` | A super art with no stock ready (`SA_WORK.ok` 0) |
+| `projectile_alive` | A projectile move while the fighter's projectile from it is still on screen |
+| `super_art_only` | A move that only works while the super art runs (Q's Ningen Bakudan) |
+| `not_allowed` | Motion and button were in time, but the game did not start the move for none of the reasons above |
 
 ## Cancels
 
@@ -121,6 +124,16 @@ A special or super pressed during a normal comes out only inside the normal's ca
 | 30 frames or more | super, after the kick recovered | super, from 27 |
 
 At 7 frames the press itself is a frame early, and the game takes the button's release on the next frame. When the game refuses a move whose motion and button were in time during an attack, the grader reads this window from RAM and names the miss instead of reporting a refusal. The live cases in `harness/mame/grade.lua` cover a cancel in the window, 3 frames late, before a blocked kick connects, and after a whiff.
+
+## Refusals
+
+The game also refuses a move whose motion and button were in time for reasons outside the input (`PLS03.c`). The grader reads them from RAM and names them; the card shows them in grey, and they count as good input.
+
+- **No meter**: `check_super_arts_attack` starts a super art only while the player's `SA_WORK.ok` (through `PLW.sa`, player + 0x3F0) is 1. It is 0 without a stock and -1 while the art runs.
+- **Projectile on screen**: `check_special_attack` skips a move flagged `CMD_BT_SHELL` while `shell_live_check` finds a projectile from it: the fighter lists its projectiles in `shell_ix` (player + 0x34C), each an effect block at `0x02028990 + index × 0x800` whose `original_vitality` (+0x362) holds the command slot that fired it, unless `refrected` (+0x3C5) says it was reflected. For Gouki any of slots 31, 33 and 46 blocks them all. The flag is in the ROM tables, so every character's projectile moves are covered.
+- **Super art only**: moves flagged `CMD_BT_SA_ONLY` start only while `SA_WORK.ok` is -1.
+
+`harness/mame/refusals.lua` logs these fields through a super with and without meter, two Hadokens in a row and an EX Hadoken. An EX special without meter is never refused: the game starts the normal version. The live cases in `harness/mame/grade.lua` cover a super without meter and a Hadoken while the last one is on screen.
 
 ## Parries
 

@@ -40,9 +40,8 @@ function App.new(deps)
   return self
 end
 
--- An input the game refused (busy, a fireball on screen) was still the right input.
 local function good_input(attempt)
-  return attempt.ok or (attempt.error ~= nil and attempt.error.code == "not_allowed")
+  return attempt.ok or card.refused(attempt)
 end
 
 function App:frame()

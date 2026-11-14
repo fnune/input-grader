@@ -195,6 +195,20 @@ return {
     end,
   },
   {
+    "no meter and a projectile on screen are refusals too: grey, named, and counted as good input",
+    function()
+      for code, label in pairs({ no_meter = "NO METER", projectile_alive = "PROJECTILE ON SCREEN" }) do
+        local a = attempt(CLEAN)
+        a.ok, a.error = false, { code = code, text = "" }
+        T.eq(card.kind(a), "refused")
+        T.truthy(card.refused(a), "counted as good input")
+        local c = drawn(a)
+        T.eq(c:has_line(COL.bad), false, "no red")
+        T.truthy(c:has_text(label), label)
+      end
+    end,
+  },
+  {
     "a parry card: the tap and the hit, with where the hit landed in the tap's window",
     function()
       local a = {

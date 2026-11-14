@@ -16,6 +16,9 @@ local SHORT = {
   not_allowed = "GAME REFUSED",
   cancel_whiff = "WHIFFED",
   cancel_none = "NO CANCEL",
+  no_meter = "NO METER",
+  projectile_alive = "PROJECTILE ON SCREEN",
+  super_art_only = "SUPER ART ONLY",
 }
 
 local function label_dir(label)
@@ -74,9 +77,14 @@ function M.reason(attempt)
   return { parts = { SHORT[code] or code }, step = k }
 end
 
-local function refused(attempt)
-  return not attempt.ok and attempt.error ~= nil and attempt.error.code == "not_allowed"
+local REFUSALS = { not_allowed = true, no_meter = true, projectile_alive = true, super_art_only = true }
+
+--- The input was right, but the game would not start the move: no meter, a projectile still out.
+function M.refused(attempt)
+  return not attempt.ok and attempt.error ~= nil and REFUSALS[attempt.error.code] == true
 end
+
+local refused = M.refused
 
 local function came_out_on_release(attempt)
   local t = attempt.trace
@@ -575,7 +583,7 @@ function M.draw(canvas, attempt, opts)
   local tail_colour = starred and COL.gold or ((ok or kind == "refused") and COL.dim or COL.bad)
   local tx = draw.inline(canvas, name_x + draw.CHAR_W * #name + 6, ty, tail, tail_colour)
   if starred and not perfect then
-    draw.inline(canvas, tx + 6, ty, kind == "refused" and { "GAME REFUSED" } or r.parts, COL.dim)
+    draw.inline(canvas, tx + 6, ty, r.parts, COL.dim)
   end
 
   draw.rbox(canvas, x0, y0, x1, y0 + height, COL.panel, verdict)

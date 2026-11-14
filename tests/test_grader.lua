@@ -24,24 +24,31 @@ local function play(script, opts)
   return attempts
 end
 
-local function super_on_frame_25_during_attack_from_10_to_60(attack)
-  local source = sources.sim(T.commands(), RYU, 0)
-  local game = Game.new(source, T.commands())
-  local timeline =
-    inputs.timeline({ { 5, 20 }, { 2, 1 }, { 3, 1 }, { 6, 1 }, { 2, 1 }, { 3, 1, "HP" }, { 5, 50 } }, true)
+local function graded_with_game_state(script, game_at, opts)
+  opts = opts or {}
+  local source = sources.sim(T.commands(), opts.row or RYU, 0)
+  local game = Game.new(source, T.commands(), { target = opts.target })
   local attempts = {}
-  for i, raw in ipairs(timeline) do
-    local state
-    if i >= 10 and i <= 60 then
-      local cancellable = attack.cancel_from and i >= attack.cancel_from and i <= attack.cancel_to
-      local in_contact = attack.contact_from ~= nil and i >= attack.contact_from
-      state = { routine = { 4, 0 }, cancel = { bits = cancellable and 0x60 or 0, contact = in_contact } }
-    end
-    source:push(raw, true, false, state)
+  for i, raw in ipairs(inputs.timeline(script, true)) do
+    source:push(raw, true, false, game_at(i))
     for _, a in ipairs(game:update()) do
       table.insert(attempts, a)
     end
   end
+  return attempts
+end
+
+local SUPER_HP_ON_25 = { { 5, 20 }, { 2, 1 }, { 3, 1 }, { 6, 1 }, { 2, 1 }, { 3, 1, "HP" }, { 5, 50 } }
+
+local function super_on_frame_25_during_attack_from_10_to_60(attack)
+  local attempts = graded_with_game_state(SUPER_HP_ON_25, function(i)
+    if i < 10 or i > 60 then
+      return nil
+    end
+    local cancellable = attack.cancel_from and i >= attack.cancel_from and i <= attack.cancel_to
+    local in_contact = attack.contact_from ~= nil and i >= attack.contact_from
+    return { routine = { 4, 0 }, cancel = { bits = cancellable and 0x60 or 0, contact = in_contact } }
+  end)
   T.eq(#attempts, 1, "attempts")
   return attempts[1]
 end
@@ -92,6 +99,46 @@ return {
       local a = super_on_frame_25_during_attack_from_10_to_60({ contact_from = 12 })
       T.eq(a.error.code, "cancel_none")
       T.contains(a.error.text, "into a super art")
+    end,
+  },
+  {
+    "a super refused without a super art stock says no meter, as a refusal",
+    function()
+      local attempts = graded_with_game_state(SUPER_HP_ON_25, function()
+        return { refuse = true, super_art_ok = 0 }
+      end)
+      T.eq(#attempts, 1, "attempts")
+      T.eq(attempts[1].move, "SA I Shinkuu Hadoken")
+      T.eq(attempts[1].error.code, "no_meter")
+    end,
+  },
+  {
+    "a Hadoken refused while its own fireball is still on screen says so",
+    function()
+      local attempts = graded_with_game_state({ { 5, 5 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 30 } }, function()
+        return { refuse = true, super_art_ok = 1, projectiles = { [29] = true } }
+      end)
+      T.eq(#attempts, 1, "attempts")
+      T.eq(attempts[1].error.code, "projectile_alive")
+    end,
+  },
+  {
+    "another move's projectile does not block a Hadoken",
+    function()
+      local attempts = graded_with_game_state({ { 5, 5 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 30 } }, function()
+        return { refuse = true, super_art_ok = 1, projectiles = { [20] = true } }
+      end)
+      T.eq(attempts[1].error.code, "not_allowed")
+    end,
+  },
+  {
+    "Gouki's Shakunetsu Hadoken on screen blocks his Gou Hadoken: the game checks his projectiles together",
+    function()
+      local attempts = graded_with_game_state({ { 5, 5 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" }, { 5, 30 } }, function()
+        return { refuse = true, super_art_ok = 1, projectiles = { [33] = true } }
+      end, { row = 14 })
+      T.eq(attempts[1].move, "Gou Hadoken")
+      T.eq(attempts[1].error.code, "projectile_alive")
     end,
   },
   {

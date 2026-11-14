@@ -71,7 +71,7 @@ If you map FBNeo's Lua Hotkeys 8 and 9 (Input > Map game inputs), they do the sa
 | Top row | What the move needs: each direction, then the button. A dashed box is an optional direction (the last 6 of a super). A small ball on a slot means "then let go" (the Shoryuken's first 6) |
 | Middle row | What you did in that input's time. The first column also shows how long you held the first direction |
 | Meters | Frames since the previous input over frames allowed: `2/10`. The bar is green up to half the window, orange past half, red past the end, with a notch where the window ended. An orange EARLY under the button of a move that came out: you pressed before the motion finished and the game took the release instead |
-| Box colour | Green: the move came out. Red: it did not. Grey: your input was right but the game refused the move (busy, or a fireball still on screen). Gold: frame-perfect |
+| Box colour | Green: the move came out. Red: it did not. Grey: your input was right but the game refused the move, with the reason when the grader knows it: NO METER, PROJECTILE ON SCREEN, SUPER ART ONLY, or GAME REFUSED. Gold: frame-perfect |
 | Pearls | Recent attempts; the one shown is bigger and lifted |
 | Dimmed card | It no longer answers what you did: a button since then got no card, or it is for another move than your target |
 | Line above the card | With a target: successes over attempts and the rate since you picked it. A refused input counts as a success |

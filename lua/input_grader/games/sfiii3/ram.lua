@@ -31,7 +31,13 @@ M.RL_FLAG, M.RL_WAZA, M.POS_Y = 0x0A, 0x0B, 0x68
 M.PLAYER_NUMBER, M.SA_STOP_FLAG, M.DO_NOT_MOVE = 0x3C0, 0x41C, 0x455
 M.ROUTINE_NO, M.ATT_GUARD, M.JUMP_ATT_FLAG, M.GUARD_CHUU = 0x24, 0x2E1, 0x304, 0x3D3
 M.CG_TYPE = 0x215
+-- WORK.cg_cancel and WORK.meoshi_hit_flag, from tools/offsets.c.
 M.CG_CANCEL, M.MEOSHI_HIT_FLAG = 0x221, 0x2FF
+-- PLW.sa and SA_WORK.ok, WORK.shell_ix, WORK.original_vitality and WORK_Other.refrected, from
+-- tools/offsets.c. FRW, the effect object blocks, from 3rd_training_lua's gamestate.lua.
+M.SA_POINTER, M.SA_OK = 0x3F0, 10
+M.SHELL_IX, M.ORIGINAL_VITALITY, M.REFRECTED = 0x34C, 0x362, 0x3C5
+M.FRW, M.OBJECT_BYTES, M.SHELLS = 0x02028990, 0x800, 8
 
 --- The facing the command check uses: rl_waza, which can differ from the sprite's rl_flag
 --- for a few frames around a cross-up.
@@ -59,6 +65,29 @@ function Ram:airborne_at_check()
     return self.was_airborne
   end
   return was
+end
+
+--- 1 with a super art stock ready, 0 without, -1 while the super art runs.
+function Ram:super_art_ok()
+  local v = self.mem.u8(self.mem.u32(M.PLAYER[self.player] + M.SA_POINTER) + M.SA_OK)
+  return v >= 128 and v - 256 or v
+end
+
+--- The command slots of this player's projectiles still on screen, as a set; a reflected one
+--- belongs to the opponent.
+function Ram:live_projectiles()
+  local base, slots = M.PLAYER[self.player], {}
+  for i = 0, M.SHELLS - 1 do
+    local ix = self.mem.s16(base + M.SHELL_IX + 2 * i)
+    if ix == -1 then
+      break
+    end
+    local object = M.FRW + ix * M.OBJECT_BYTES
+    if self.mem.u8(object + M.REFRECTED) == 0 then
+      slots[self.mem.s16(object + M.ORIGINAL_VITALITY)] = true
+    end
+  end
+  return slots
 end
 
 function Ram:selected_super_art()

@@ -94,6 +94,8 @@ function RamSource:poll()
     started = started,
     fighter_row = self.ram:fighter_row(),
     super_art = self.ram:selected_super_art(),
+    super_art_ok = self.ram:super_art_ok(),
+    projectiles = self.ram:live_projectiles(),
   }
 end
 
@@ -114,12 +116,14 @@ end
 
 SimSource.BUSY_FRAMES = 30
 
---- `attack`, when given, stands in for a normal the player is in: { routine, cancel = { bits, contact } }.
---- No move starts during it unless the cancel allows one.
-function SimSource:push(raw, facing_right, airborne, attack)
+--- `game`, when given, stands in for game state the checker does not model, all optional:
+--- `routine` and `cancel = { bits, contact }` for a normal the player is in (no move starts during
+--- it unless the cancel allows one), `super_art_ok` and `projectiles` as the RAM source reads them,
+--- and `refuse` to start nothing.
+function SimSource:push(raw, facing_right, airborne, game)
   table.insert(
     self.queue,
-    { raw = raw, facing_right = facing_right ~= false, airborne = airborne or false, attack = attack }
+    { raw = raw, facing_right = facing_right ~= false, airborne = airborne or false, game = game or {} }
   )
 end
 
@@ -132,12 +136,12 @@ function SimSource:poll()
   checker:frame(input.raw, input)
   local art = self.fighter.super_arts[self.super_art + 1]
   local started
-  local attack, was = input.attack, self.attack
-  self.attack = attack
-  local cancellable = not attack or (was and was.cancel.contact and was.cancel.bits ~= 0)
+  local game, was = input.game, self.game
+  self.game = game
+  local cancellable = not game.cancel or (was and was.cancel and was.cancel.contact and was.cancel.bits ~= 0)
   if self.busy > 0 then
     self.busy = self.busy - 1
-  elseif cancellable then
+  elseif cancellable and not game.refuse then
     started = checker:start({ airborne = input.airborne, super_art = art })
     if started then
       self.busy = SimSource.BUSY_FRAMES
@@ -156,8 +160,10 @@ function SimSource:poll()
     raw = input.raw,
     facing_right = input.facing_right,
     airborne = input.airborne,
-    routine = attack and attack.routine,
-    cancel = attack and attack.cancel,
+    routine = game.routine,
+    cancel = game.cancel,
+    super_art_ok = game.super_art_ok,
+    projectiles = game.projectiles,
     sw_new = checker.lvr.sw_new,
     state = state,
     started = started,

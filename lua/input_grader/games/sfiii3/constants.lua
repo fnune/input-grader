@@ -53,6 +53,8 @@ M.BT_NONE = 0x80
 M.BT_STRENGTH4 = 0x600
 M.BT_EX = 0x400
 M.BT_SHELL = 0x800
+M.BT_SA_ONLY = 0x1000
+M.GOUKI1_ROW, M.GOUKI1_SHELL_SLOTS = 14, { 31, 33, 46 }
 M.EX_BUTTON = 0xF
 
 M.CONPANE = { [0] = "sw_lvbt", [1] = "sw_new", [2] = "sw_old", [3] = "sw_now", [4] = "sw_off", [5] = "sw_chg" }

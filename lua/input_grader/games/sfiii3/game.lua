@@ -272,6 +272,8 @@ function Game:update()
     attack = self:attack_id(obs.routine),
     cancel = obs.cancel and obs.cancel.bits or 0,
     contact = obs.cancel ~= nil and obs.cancel.contact,
+    super_art_ok = obs.super_art_ok,
+    projectiles = obs.projectiles,
   })
 
   local dead = {}
@@ -503,6 +505,32 @@ function Game:cancel_error(p, slot)
   return { code = "cancel_whiff", text = "the attack missed: only a hit or a block can be cancelled" }
 end
 
+function Game:projectile_out(slot, projectiles)
+  if self.fighter_row ~= C.GOUKI1_ROW then
+    return projectiles[slot] == true
+  end
+  for _, shell in ipairs(C.GOUKI1_SHELL_SLOTS) do
+    if projectiles[shell] then
+      return true
+    end
+  end
+  return false
+end
+
+function Game:refusal(p, slot, record)
+  local at = self.history:at(p.frame - 1) or {}
+  if is_super(slot) and at.super_art_ok == 0 then
+    return { code = "no_meter", text = "no super art stock" }
+  end
+  if has(record.btix, C.BT_SHELL) and at.projectiles and self:projectile_out(slot, at.projectiles) then
+    return { code = "projectile_alive", text = "your projectile was still on screen" }
+  end
+  if has(record.btix, C.BT_SA_ONLY) and at.super_art_ok ~= nil and at.super_art_ok ~= -1 then
+    return { code = "super_art_only", text = "this move only works while the super art runs" }
+  end
+  return nil
+end
+
 function Game:diagnose(p, pick)
   local record, run = pick.record, pick.run
   local steps = record.steps
@@ -531,7 +559,8 @@ function Game:diagnose(p, pick)
         text = "button " .. plural(after - window, "frame") .. " too late (allowed " .. window .. " after the motion)",
       }
     end
-    return self:cancel_error(p, pick.slot)
+    return self:refusal(p, pick.slot, record)
+      or self:cancel_error(p, pick.slot)
       or {
         code = "not_allowed",
         text = "motion and button were in time; the game refused the move (busy, meter or a fireball on screen)",

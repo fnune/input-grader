@@ -2,6 +2,10 @@
 
 Changes that matter to players, newest first. Versions follow [semantic versioning](https://semver.org/).
 
+## 0.1.1
+
+- Shorter install notes, with Fightcade's usual folder and how to uninstall.
+
 ## 0.1.0
 
 The first release, for Street Fighter III: 3rd Strike on Fightcade.

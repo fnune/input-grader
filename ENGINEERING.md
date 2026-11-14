@@ -83,10 +83,19 @@ Reference: [Mark Seemann](https://blog.ploeh.dk/), [*Dependency Injection Princi
 
 ### Writing style
 
-- Sentence case in headings.
-- Bold sparingly.
+Docs, commit messages and comments follow these rules. Most of them avoid the habits listed in Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing).
+
+- Write for the reader of that page. The README is for players; developer detail goes in `docs/development.md` or the internals.
+- Sentence case in headings, and no headings phrased as questions or starting with a question word (What, How, Why, Where).
+- Plain, short sentences. Split a sentence that chains clauses with colons, or nests parentheses.
+- No fragments as openers ("Plain keys, no setup."). Start with a full sentence that says what the thing is.
+- Bold sparingly, and never as a label at the start of a list item.
 - No em-dashes. Use a colon, comma, semicolon or period.
-- No rhetorical triplets.
+- No rhetorical triplets, and no "not X but Y" contrasts against a claim nobody made.
+- No claims of significance ("stands as", "serves as", "a testament to"), and no "-ing" tails that add importance ("highlighting how…").
+- Say each fact once, in one place, and link to it from elsewhere.
+- Image alt text is one sentence.
+- Never hard-wrap markdown: one line per paragraph and per list item.
 
 ## Use of AI and LLMs
 

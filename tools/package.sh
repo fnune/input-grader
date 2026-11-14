@@ -23,7 +23,8 @@ and if asked, choose to replace the files:
   On Linux with the Flatpak: ~/.var/app/com.fightcade.Fightcade/data
 
 If you use effie3rd's training mode, copy effie3rd-compatible/fbneo-training-mode
-instead.
+instead. On Linux, then also make fbneo-training-mode/fbneo-training-mode.lua
+read-only there.
 
 Then start 3rd Strike with Fightcade's training mode, and press M in a match.
 

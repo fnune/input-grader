@@ -21,7 +21,7 @@ The windows come from the game's own code, read from the arcade ROM, including r
 Input grader works with Street Fighter III: 3rd Strike on Fightcade 2, in Fightcade's training mode. It does not support other games or emulators yet.
 
 1. Download `input-grader-<version>.zip` from the [latest release](https://github.com/fnune/input-grader/releases/latest).
-2. Open the zip, and drag the `fbneo-training-mode` folder in it onto the `emulator\fbneo` folder inside your Fightcade folder. When Windows asks, choose to merge the folders and replace the files.
+2. Open the zip, and drag the `fbneo-training-mode` folder in it onto the `emulator\fbneo` folder inside your Fightcade folder. That's the folder that holds `ROMs`, where you put the 3rd Strike ROM. When Windows asks, choose to merge the folders and replace the files.
 3. Start 3rd Strike in Fightcade with its training mode, as usual. In a match, press M to open the grader's menu.
 
 To update, download the newer zip and do the same.

@@ -93,6 +93,17 @@ return {
     end,
   },
   {
+    "a move that came out on the button's release still shows the early press, as a warning, never clean",
+    function()
+      local a = attempt({ { 5, 6 }, { 2, 2 }, { 3, 1, "LP" }, { 6, 1 } })
+      T.eq(a.ok, true)
+      T.eq(card.kind(a), "out")
+      local c = drawn(a)
+      T.eq(c:has_text("EARLY").c, COL.warn)
+      T.truthy(c:has_line(COL.good), "green box")
+    end,
+  },
+  {
     "a frame-perfect Hadoken is gold and says FRAME-PERFECT",
     function()
       local a = attempt({ { 5, 6 }, { 2, 1 }, { 3, 1 }, { 6, 1, "LP" } })

@@ -78,6 +78,11 @@ local function refused(attempt)
   return not attempt.ok and attempt.error ~= nil and attempt.error.code == "not_allowed"
 end
 
+local function came_out_on_release(attempt)
+  local t = attempt.trace
+  return attempt.ok and t ~= nil and t.complete_at ~= nil and t.button_at ~= nil and t.button_at < t.complete_at
+end
+
 local function safe(attempt)
   local t = attempt.trace
   for k, s in ipairs(t.steps) do
@@ -106,6 +111,9 @@ function M.kind(attempt)
   end
   if not attempt or not attempt.ok then
     return "missed"
+  end
+  if came_out_on_release(attempt) then
+    return "out"
   end
   if attempt.total == attempt.minimum then
     return "perfect"
@@ -611,7 +619,7 @@ function M.draw(canvas, attempt, opts)
       elseif t.button_at - t.complete_at >= 0 then
         draw.meter(canvas, mid, my, t.button_at - t.complete_at, t.button_window, cx, w)
       else
-        canvas:text(mid - 10, my, "EARLY", COL.bad)
+        canvas:text(mid - 10, my, "EARLY", ok and COL.warn or COL.bad)
       end
     else
       local s = t.steps[k]

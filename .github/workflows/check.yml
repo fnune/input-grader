@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: fnune/ci@1acf10fef155895b7441ad432e6d42b2a0be5e6e
+      - uses: fnune/ci@395771a1db7789d50e1070d49e746465de179042
         with:
           dev-shell: ""
           command: nix run .#check
